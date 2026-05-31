@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="高配当株ウォッチノート">
+<title>高配当株ウォッチノート</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430px; margin:0 auto; }
+.header { background:linear-gradient(135deg,#8B6914,#C9A84C,#F0D080); padding:48px 20px 24px; }
+.header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.header-title { font-size:18px; font-weight:900; color:#fff; }
+.add-btn { background:rgba(255,255,255,0.3); border:2px solid rgba(255,255,255,0.6); color:#fff; font-size:14px; font-weight:700; padding:10px 18px; border-radius:50px; cursor:pointer; }
+.stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.stat { background:rgba(255,255,255,0.2); border-radius:12px; padding:10px; }
+.stat-label { font-size:9px; color:rgba(255,255,255,0.8); margin-bottom:4px; }
+.stat-value { font-size:13px; font-weight:900; color:#fff; }
+.tabs { display:flex; background:#fff; border-bottom:2px solid #E8DFC8; }
+.tab { flex:1; padding:14px; text-align:center; font-size:13px; font-weight:700; color:#6B5C3E; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; }
+.tab.active { color:#8B6914; border-bottom-color:#C9A84C; }
+.content { padding:16px; }
+.empty { text-align:center; padding:60px 20px; color:#6B5C3E; }
+.empty-icon { font-size:48px; margin-bottom:12px; }
+.stock-card { background:#fff; border-radius:14px; padding:16px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); cursor:pointer; border-left:5px solid #ddd; }
+.stock-card.bought { background:#F0FFF4; border-left-color:#2E7D32; }
+.stock-card.watching { background:#FFFDF0; border-left-color:#C9A84C; }
+.stock-card.considering { background:#F9F0FF; border-left-color:#6A1B9A; }
+.tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+.tag { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+.tag-code { background:#FFF3CD; color:#856404; }
+.tag-bought { background:#D4EDDA; color:#2E7D32; }
+.tag-watching { background:#FFF3CD; color:#856404; }
+.tag-considering { background:#F3E5F5; color:#6A1B9A; }
+.tag-defensive { background:#FCE4EC; color:#AD1457; }
+.tag-sensitive { background:#E8F5E9; color:#2E7D32; }
+.stock-name { font-size:20px; font-weight:900; margin-bottom:8px; display:flex; justify-content:space-between; }
+.stock-prices { font-size:12px; color:#6B5C3E; display:flex; gap:12px; flex-wrap:wrap; }
+.pv { font-weight:700; color:#1A1208; }
+.yv { font-weight:700; color:#8B6914; }
+
+/* OVERLAY */
+.overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:100; }
+.overlay.show { display:block; }
+.sheet { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:#fff; border-radius:24px 24px 0 0; padding:24px 20px 48px; z-index:101; max-height:90vh; overflow-y:auto; }
+.sheet-title { font-size:18px; font-weight:900; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; }
+.close-btn { background:#F0EDE4; border:none; width:32px; height:32px; border-radius:50%; font-size:20px; cursor:pointer; line-height:32px; text-align:center; }
+.fg { margin-bottom:16px; }
+.fl { font-size:12px; font-weight:700; color:#6B5C3E; margin-bottom:6px; display:block; }
+.fi { width:100%; border:2px solid #E8DFC8; border-radius:12px; padding:12px 14px; font-size:15px; font-family:sans-serif; background:#FAF8F2; outline:none; }
+.fi:focus { border-color:#C9A84C; }
+.cycle-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cy { border:2px solid #E8DFC8; border-radius:12px; padding:12px; cursor:pointer; }
+.cy.sel { border-color:#C9A84C; background:#FFFAED; }
+.cy-name { font-size:13px; font-weight:700; margin-bottom:2px; }
+.cy-desc { font-size:10px; color:#6B5C3E; }
+.st-row { display:flex; gap:8px; }
+.st { flex:1; border:2px solid #E8DFC8; border-radius:12px; padding:10px; text-align:center; font-size:12px; font-weight:700; cursor:pointer; }
+.st.sel { border-color:#C9A84C; background:#FFFAED; color:#8B6914; }
+.save-btn { width:100%; background:linear-gradient(135deg,#C9A84C,#F0D080); border:none; color:#fff; font-size:16px; font-weight:700; padding:16px; border-radius:14px; cursor:pointer; margin-top:8px; }
+.del-btn { width:100%; background:none; border:2px solid #FFCDD2; color:#C62828; font-size:14px; font-weight:700; padding:14px; border-radius:14px; cursor:pointer; margin-top:12px; }
+.yahoo-btn { width:100%; background:linear-gradient(135deg,#C9A84C,#F0D080); border:none; color:#fff; font-size:14px; font-weight:700; padding:14px; border-radius:14px; cursor:pointer; margin:16px 0; }
+.detail-row { display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid #EEE8D8; font-size:15px; }
+.dl { color:#6B5C3E; }
+.dv { font-weight:700; }
+.hist-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.hist-title { font-size:15px; font-weight:700; }
+.hist-add { background:#C9A84C; border:none; color:#fff; font-size:13px; font-weight:700; padding:8px 16px; border-radius:20px; cursor:pointer; }
+.hist-empty { background:#F5F0E8; border-radius:12px; padding:20px; text-align:center; color:#6B5C3E; font-size:13px; }
+.hist-item { background:#FAF8F2; border-radius:12px; padding:14px; margin-bottom:8px; }
+.hist-top { display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px; }
+.hist-date { color:#6B5C3E; }
+.hist-total { font-weight:700; color:#8B6914; }
+.hist-sub { font-size:12px; color:#6B5C3E; }
+.detail-view { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#FAF8F2; z-index:50; overflow-y:auto; max-width:430px; left:50%; transform:translateX(-50%); }
+.detail-view.show { display:block; }
+.detail-header { background:linear-gradient(135deg,#8B6914,#C9A84C); padding:48px 20px 20px; display:flex; justify-content:space-between; align-items:center; }
+.back-btn { background:rgba(255,255,255,0.25); border:none; color:#fff; font-size:13px; font-weight:700; padding:8px 14px; border-radius:20px; cursor:pointer; }
+.det-title { font-size:20px; font-weight:900; color:#fff; }
+.edit-btn { background:rgba(255,255,255,0.25); border:none; color:#fff; font-size:13px; font-weight:700; padding:8px 14px; border-radius:20px; cursor:pointer; }
+.detail-body { padding:20px; }
+.chart-card { background:#fff; border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.chart-tabs { display:flex; gap:8px; margin-bottom:16px; }
+.chart-tab { flex:1; text-align:center; padding:8px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; background:#F5F0E8; color:#6B5C3E; }
+.chart-tab.active { background:linear-gradient(135deg,#C9A84C,#F0D080); color:#fff; }
+.donut-wrap { display:flex; align-items:center; gap:20px; }
+.donut-box { position:relative; width:110px; height:110px; flex-shrink:0; border-radius:50%; }
+.donut-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:2; }
+.dc-label { font-size:9px; color:#6B5C3E; }
+.dc-value { font-size:13px; font-weight:900; }
+.legend { flex:1; }
+.li { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:12px; }
+.ld { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.ln { color:#6B5C3E; flex:1; }
+.lp { font-weight:700; }
+.div-card { background:#fff; border-radius:14px; padding:16px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.div-head { display:flex; justify-content:space-between; margin-bottom:6px; }
+.div-name { font-size:16px; font-weight:700; }
+.div-total { font-size:18px; font-weight:900; color:#8B6914; }
+.div-detail { font-size:12px; color:#6B5C3E; }
+</style>
+</head>
+<body>
+
+<!-- メイン画面 -->
+<div id="mainView">
+  <div class="header">
+    <div class="header-top">
+      <div class="header-title">🐑 高配当株ウォッチノート</div>
+      <button class="add-btn" id="addBtn">＋ 追加</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">登録銘柄</div><div class="stat-value" id="sCount">0銘柄</div></div>
+      <div class="stat"><div class="stat-label">年間配当</div><div class="stat-value" id="sAnnual">¥0</div></div>
+      <div class="stat"><div class="stat-label">累計配当</div><div class="stat-value" id="sTotal">¥0</div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" id="tab1">📊 銘柄管理</div>
+    <div class="tab" id="tab2">⭐ 配当金記録</div>
+  </div>
+  <div class="content">
+    <div id="stocksTab">
+      <div class="chart-card" id="chartCard" style="display:none">
+        <div class="chart-tabs">
+          <div class="chart-tab active" id="ctab1" onclick="switchChart(1)">🥮 景気サイクル</div>
+          <div class="chart-tab" id="ctab2" onclick="switchChart(2)">🛡 銘柄タイプ</div>
+        </div>
+        <div id="chart1">
+          <div class="donut-wrap">
+            <div class="donut-box" id="donutBox1">
+              <div class="donut-center"><div class="dc-label">合計</div><div class="dc-value" id="donutVal1">¥0</div></div>
+            </div>
+            <div class="legend" id="donutLegend1"></div>
+          </div>
+        </div>
+        <div id="chart2" style="display:none">
+          <div class="donut-wrap">
+            <div class="donut-box" id="donutBox2">
+              <div class="donut-center"><div class="dc-label">合計</div><div class="dc-value" id="donutVal2">¥0</div></div>
+            </div>
+            <div class="legend" id="donutLegend2"></div>
+          </div>
+        </div>
+      </div>
+      <div id="stockList"></div>
+      <div class="empty" id="emptyStocks"><div class="empty-icon">🐑</div><div>右上の「＋ 追加」から<br>銘柄を登録しましょう！</div></div>
+    </div>
+    <div id="divTab" style="display:none">
+      <div id="divList"></div>
+      <div class="empty" id="emptyDiv"><div class="empty-icon">💴</div><div>購入履歴を追加すると<br>配当金が表示されます</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 詳細画面 -->
+<div class="detail-view" id="detailView">
+  <div class="detail-header">
+    <button class="back-btn" id="backBtn">← 戻る</button>
+    <div class="det-title" id="detTitle"></div>
+    <button class="edit-btn" id="editBtn">編集</button>
+  </div>
+  <div class="detail-body">
+    <div class="tags" id="detTags" style="margin-bottom:12px"></div>
+    <div class="detail-row"><span class="dl">銘柄コード</span><span class="dv" id="detCode"></span></div>
+    <div class="detail-row"><span class="dl">配当利回り</span><span class="dv" id="detYield"></span></div>
+    <div class="detail-row"><span class="dl">目標株価</span><span class="dv" id="detTarget"></span></div>
+    <div class="detail-row" style="border:none"><span class="dl">ステータス</span><span class="dv" id="detStatus"></span></div>
+    <button class="yahoo-btn" id="yahooBtn">📊 Yahoo!ファイナンスで確認する ›</button>
+    <div class="hist-head">
+      <div class="hist-title">📅 購入履歴</div>
+      <button class="hist-add" id="histAddBtn">＋ 追加</button>
+    </div>
+    <div id="histList"></div>
+    <button class="del-btn" id="delBtn">🗑 この銘柄を削除する</button>
+  </div>
+</div>
+
+<!-- 追加・編集モーダル -->
+<div class="overlay" id="addOverlay"></div>
+<div class="sheet" id="addSheet" style="display:none">
+  <div class="sheet-title">
+    <span id="sheetTitle">📌 銘柄を追加</span>
+    <button class="close-btn" id="closeAddBtn">×</button>
+  </div>
+  <div class="fg"><label class="fl">📌 銘柄名（必須）</label><input class="fi" id="iName" placeholder="例：三菱商事"></div>
+  <div class="fg"><label class="fl">🔢 銘柄コード</label><input class="fi" id="iCode" placeholder="例：8058" type="number" oninput="autoClassify()"></div>
+  <div id="autoClassifyNote" style="font-size:11px;color:#C9A84C;margin:-8px 0 12px;display:none">✨ 自動分類しました！</div>
+
+  <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
+  <div class="fg"><label class="fl">🎯 目標株価（円）</label><input class="fi" id="iTarget" placeholder="例：2500" type="number"></div>
+  <div class="fg">
+    <label class="fl">🥮 景気サイクル</label>
+    <div class="cycle-grid">
+      <div class="cy" data-cycle="金融相場"><div class="cy-name">💹 金融相場</div><div class="cy-desc">情報・通信・不動産など</div></div>
+      <div class="cy" data-cycle="業績相場"><div class="cy-name">🏭 業績相場</div><div class="cy-desc">機械・化学・電気機器など</div></div>
+      <div class="cy" data-cycle="逆金融相場"><div class="cy-name">🛡 逆金融相場</div><div class="cy-desc">公益・食品・医薬品など</div></div>
+      <div class="cy" data-cycle="逆業績相場"><div class="cy-name">⚓ 逆業績相場</div><div class="cy-desc">エネルギー・素材など</div></div>
+    </div>
+  </div>
+  <div class="fg">
+    <label class="fl">📋 ステータス</label>
+    <div class="st-row">
+      <div class="st" data-status="購入済み">購入済み</div>
+      <div class="st" data-status="監視中">監視中</div>
+      <div class="st" data-status="検討中">検討中</div>
+    </div>
+  </div>
+  <div class="fg">
+    <label class="fl">📈 銘柄タイプ</label>
+    <div class="st-row">
+      <div class="st" data-type="ディフェンシブ">🛡 ディフェンシブ</div>
+      <div class="st" data-type="景気敏感">📊 景気敏感</div>
+    </div>
+  </div>
+  <button class="save-btn" id="saveBtn">✓ 追加する</button>
+</div>
+
+<!-- 購入履歴モーダル -->
+<div class="overlay" id="histOverlay"></div>
+<div class="sheet" id="histSheet" style="display:none">
+  <div class="sheet-title">
+    <span>📅 購入履歴を追加</span>
+    <button class="close-btn" id="closeHistBtn">×</button>
+  </div>
+  <div class="fg"><label class="fl">📅 購入日</label><input class="fi" id="hDate" type="date"></div>
+  <div class="fg"><label class="fl">💴 購入価格（円）</label><input class="fi" id="hPrice" placeholder="例：2850" type="number"></div>
+  <div class="fg"><label class="fl">📊 購入株数</label><input class="fi" id="hShares" placeholder="例：100" type="number"></div>
+  <button class="save-btn" id="saveHistBtn">✓ 追加する</button>
+</div>
+
+<script>
+var stocks = JSON.parse(localStorage.getItem('wn') || '[]');
+var curId = null;
+var isEdit = false;
+var CC = {'金融相場':'#4A90D9','業績相場':'#C9A84C','逆金融相場':'#5CB85C','逆業績相場':'#E8564A'};
+var COLS = ['#C9A84C','#4A90D9','#5CB85C','#E8564A','#9B59B6'];
+
+// 日経225銘柄の自動分類データ（コード: [景気サイクル, 銘柄タイプ]）
+var STOCK_DB = {
+  '1332':['逆業績相場','ディフェンシブ'],'1605':['逆業績相場','景気敏感'],
+  '1721':['業績相場','景気敏感'],'1801':['業績相場','景気敏感'],'1802':['業績相場','景気敏感'],
+  '1803':['業績相場','景気敏感'],'1808':['業績相場','景気敏感'],'1812':['業績相場','景気敏感'],
+  '1925':['業績相場','景気敏感'],'1928':['業績相場','景気敏感'],
+  '2002':['逆金融相場','ディフェンシブ'],'2269':['逆金融相場','ディフェンシブ'],
+  '2282':['逆金融相場','ディフェンシブ'],'2413':['金融相場','景気敏感'],
+  '2432':['金融相場','景気敏感'],'2501':['逆金融相場','ディフェンシブ'],
+  '2502':['逆金融相場','ディフェンシブ'],'2503':['逆金融相場','ディフェンシブ'],
+  '2531':['逆金融相場','ディフェンシブ'],'2802':['逆金融相場','ディフェンシブ'],
+  '2871':['逆金融相場','ディフェンシブ'],'2914':['逆金融相場','ディフェンシブ'],
+  '3086':['金融相場','景気敏感'],'3099':['金融相場','景気敏感'],
+  '3289':['金融相場','景気敏感'],'3382':['逆金融相場','ディフェンシブ'],
+  '3401':['業績相場','景気敏感'],'3402':['業績相場','景気敏感'],
+  '3405':['業績相場','景気敏感'],'3407':['業績相場','景気敏感'],
+  '3436':['業績相場','景気敏感'],'3産':['業績相場','景気敏感'],
+  '4004':['業績相場','景気敏感'],'4005':['業績相場','景気敏感'],
+  '4021':['業績相場','景気敏感'],'4042':['業績相場','景気敏感'],
+  '4043':['業績相場','景気敏感'],'4061':['業績相場','景気敏感'],
+  '4063':['業績相場','景気敏感'],'4183':['業績相場','景気敏感'],
+  '4188':['業績相場','景気敏感'],'4208':['業績相場','景気敏感'],
+  '4272':['業績相場','景気敏感'],'4452':['逆金融相場','ディフェンシブ'],
+  '4503':['逆金融相場','ディフェンシブ'],'4506':['逆金融相場','ディフェンシブ'],
+  '4507':['逆金融相場','ディフェンシブ'],'4519':['逆金融相場','ディフェンシブ'],
+  '4523':['逆金融相場','ディフェンシブ'],'4528':['逆金融相場','ディフェンシブ'],
+  '4536':['逆金融相場','ディフェンシブ'],'4543':['業績相場','景気敏感'],
+  '4568':['逆金融相場','ディフェンシブ'],'4578':['逆金融相場','ディフェンシブ'],
+  '4661':['金融相場','景気敏感'],'4689':['金融相場','景気敏感'],
+  '4704':['金融相場','景気敏感'],'4751':['金融相場','景気敏感'],
+  '4755':['金融相場','景気敏感'],'4901':['業績相場','景気敏感'],
+  '4902':['業績相場','景気敏感'],'5019':['逆業績相場','景気敏感'],
+  '5020':['逆業績相場','景気敏感'],'5101':['業績相場','景気敏感'],
+  '5108':['業績相場','景気敏感'],'5201':['業績相場','景気敏感'],
+  '5202':['業績相場','景気敏感'],'5214':['業績相場','景気敏感'],
+  '5232':['業績相場','景気敏感'],'5233':['業績相場','景気敏感'],
+  '5301':['業績相場','景気敏感'],'5332':['業績相場','景気敏感'],
+  '5333':['業績相場','景気敏感'],'5401':['業績相場','景気敏感'],
+  '5406':['業績相場','景気敏感'],'5411':['業績相場','景気敏感'],
+  '5631':['業績相場','景気敏感'],'5703':['業績相場','景気敏感'],
+  '5706':['業績相場','景気敏感'],'5707':['業績相場','景気敏感'],
+  '5711':['業績相場','景気敏感'],'5713':['業績相場','景気敏感'],
+  '5714':['業績相場','景気敏感'],'5715':['業績相場','景気敏感'],
+  '5801':['業績相場','景気敏感'],'5802':['業績相場','景気敏感'],
+  '5803':['業績相場','景気敏感'],'6098':['金融相場','景気敏感'],
+  '6103':['業績相場','景気敏感'],'6113':['業績相場','景気敏感'],
+  '6146':['業績相場','景気敏感'],'6178':['金融相場','ディフェンシブ'],
+  '6273':['業績相場','景気敏感'],'6301':['業績相場','景気敏感'],
+  '6302':['業績相場','景気敏感'],'6305':['業績相場','景気敏感'],
+  '6326':['業績相場','景気敏感'],'6361':['業績相場','景気敏感'],
+  '6367':['業績相場','景気敏感'],'6373':['業績相場','景気敏感'],
+  '6376':['業績相場','景気敏感'],'6383':['業績相場','景気敏感'],
+  '6471':['業績相場','景気敏感'],'6472':['業績相場','景気敏感'],
+  '6473':['業績相場','景気敏感'],'6479':['業績相場','景気敏感'],
+  '6501':['業績相場','景気敏感'],'6503':['業績相場','景気敏感'],
+  '6504':['業績相場','景気敏感'],'6506':['業績相場','景気敏感'],
+  '6508':['業績相場','景気敏感'],'6645':['業績相場','景気敏感'],
+  '6674':['業績相場','景気敏感'],'6702':['業績相場','景気敏感'],
+  '6703':['業績相場','景気敏感'],'6724':['業績相場','景気敏感'],
+  '6752':['業績相場','景気敏感'],'6753':['業績相場','景気敏感'],
+  '6754':['業績相場','景気敏感'],'6758':['業績相場','景気敏感'],
+  '6762':['業績相場','景気敏感'],'6770':['業績相場','景気敏感'],
+  '6841':['業績相場','景気敏感'],'6857':['業績相場','景気敏感'],
+  '6861':['業績相場','景気敏感'],'6902':['業績相場','景気敏感'],
+  '6952':['業績相場','景気敏感'],'6954':['業績相場','景気敏感'],
+  '6971':['業績相場','景気敏感'],'6976':['業績相場','景気敏感'],
+  '6981':['業績相場','景気敏感'],'7011':['業績相場','景気敏感'],
+  '7012':['業績相場','景気敏感'],'7013':['業績相場','景気敏感'],
+  '7186':['金融相場','景気敏感'],'7201':['業績相場','景気敏感'],
+  '7202':['業績相場','景気敏感'],'7203':['業績相場','景気敏感'],
+  '7205':['業績相場','景気敏感'],'7211':['業績相場','景気敏感'],
+  '7261':['業績相場','景気敏感'],'7267':['業績相場','景気敏感'],
+  '7269':['業績相場','景気敏感'],'7270':['業績相場','景気敏感'],
+  '7272':['業績相場','景気敏感'],'7731':['業績相場','景気敏感'],
+  '7733':['業績相場','景気敏感'],'7735':['業績相場','景気敏感'],
+  '7741':['業績相場','景気敏感'],'7751':['業績相場','景気敏感'],
+  '7752':['業績相場','景気敏感'],'7762':['業績相場','景気敏感'],
+  '7832':['金融相場','景気敏感'],'7974':['金融相場','景気敏感'],
+  '8001':['業績相場','景気敏感'],'8002':['業績相場','景気敏感'],
+  '8015':['業績相場','景気敏感'],'8028':['逆金融相場','ディフェンシブ'],
+  '8031':['業績相場','景気敏感'],'8035':['業績相場','景気敏感'],
+  '8053':['業績相場','景気敏感'],'8058':['業績相場','景気敏感'],
+  '8233':['逆金融相場','ディフェンシブ'],'8252':['金融相場','景気敏感'],
+  '8253':['金融相場','景気敏感'],'8267':['逆金融相場','ディフェンシブ'],
+  '8301':['金融相場','景気敏感'],'8304':['金融相場','景気敏感'],
+  '8306':['金融相場','景気敏感'],'8308':['金融相場','景気敏感'],
+  '8309':['金融相場','景気敏感'],'8316':['金融相場','景気敏感'],
+  '8331':['金融相場','景気敏感'],'8354':['金融相場','景気敏感'],
+  '8355':['金融相場','景気敏感'],'8411':['金融相場','景気敏感'],
+  '8601':['金融相場','景気敏感'],'8604':['金融相場','景気敏感'],
+  '8630':['金融相場','景気敏感'],'8633':['金融相場','景気敏感'],
+  '8697':['金融相場','景気敏感'],'8725':['金融相場','景気敏感'],
+  '8750':['金融相場','景気敏感'],'8766':['金融相場','景気敏感'],
+  '8795':['金融相場','景気敏感'],'9001':['逆金融相場','ディフェンシブ'],
+  '9005':['逆金融相場','ディフェンシブ'],'9007':['逆金融相場','ディフェンシブ'],
+  '9008':['逆金融相場','ディフェンシブ'],'9009':['逆金融相場','ディフェンシブ'],
+  '9020':['逆金融相場','ディフェンシブ'],'9021':['逆金融相場','ディフェンシブ'],
+  '9022':['逆金融相場','ディフェンシブ'],'9064':['逆金融相場','ディフェンシブ'],
+  '9101':['業績相場','景気敏感'],'9104':['業績相場','景気敏感'],
+  '9107':['業績相場','景気敏感'],'9202':['業績相場','景気敏感'],
+  '9301':['業績相場','景気敏感'],'9432':['逆金融相場','ディフェンシブ'],
+  '9433':['逆金融相場','ディフェンシブ'],'9434':['逆金融相場','ディフェンシブ'],
+  '9501':['逆金融相場','ディフェンシブ'],'9502':['逆金融相場','ディフェンシブ'],
+  '9503':['逆金融相場','ディフェンシブ'],'9531':['逆業績相場','ディフェンシブ'],
+  '9532':['逆業績相場','ディフェンシブ'],'9602':['金融相場','景気敏感'],
+  '9613':['金融相場','景気敏感'],'9681':['金融相場','景気敏感'],
+  '9706':['逆金融相場','ディフェンシブ'],'9735':['逆金融相場','ディフェンシブ'],
+  '9766':['金融相場','景気敏感'],'9983':['金融相場','景気敏感'],
+  '9984':['金融相場','景気敏感'],'4516':['逆金融相場','ディフェンシブ']
+};
+
+function autoClassify() {
+  var code = document.getElementById('iCode').value.trim();
+  var note = document.getElementById('autoClassifyNote');
+  if (!code || !STOCK_DB[code]) { note.style.display='none'; return; }
+  var data = STOCK_DB[code];
+  // 景気サイクル自動選択
+  document.querySelectorAll('.cy').forEach(function(e){ e.classList.toggle('sel', e.dataset.cycle === data[0]); });
+  // 銘柄タイプ自動選択
+  document.querySelectorAll('.st[data-type]').forEach(function(e){ e.classList.toggle('sel', e.dataset.type === data[1]); });
+  note.style.display = 'block';
+}
+
+function sv() { localStorage.setItem('wn', JSON.stringify(stocks)); }
+
+// タブ切り替え
+document.getElementById('tab1').onclick = function() {
+  document.getElementById('tab1').className = 'tab active';
+  document.getElementById('tab2').className = 'tab';
+  document.getElementById('stocksTab').style.display = 'block';
+  document.getElementById('divTab').style.display = 'none';
+};
+document.getElementById('tab2').onclick = function() {
+  document.getElementById('tab1').className = 'tab';
+  document.getElementById('tab2').className = 'tab active';
+  document.getElementById('stocksTab').style.display = 'none';
+  document.getElementById('divTab').style.display = 'block';
+  renderDiv();
+};
+
+// 追加ボタン
+document.getElementById('addBtn').onclick = function() {
+  isEdit = false;
+  document.getElementById('sheetTitle').textContent = '📌 銘柄を追加';
+  document.getElementById('iName').value = '';
+  document.getElementById('iCode').value = '';
+  document.getElementById('iYield').value = '';
+  document.getElementById('iTarget').value = '';
+  document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
+  document.querySelectorAll('.st').forEach(function(e){ e.classList.remove('sel'); });  document.getElementById('saveBtn').textContent = '✓ 追加する';
+  document.getElementById('addOverlay').className = 'overlay show';
+  document.getElementById('addSheet').style.display = 'block';
+};
+
+document.getElementById('closeAddBtn').onclick = closeAdd;
+document.getElementById('addOverlay').onclick = closeAdd;
+function closeAdd() {
+  document.getElementById('addOverlay').className = 'overlay';
+  document.getElementById('addSheet').style.display = 'none';
+}
+
+// サイクル・ステータス選択
+document.querySelectorAll('.cy').forEach(function(el) {
+  el.onclick = function() {
+    document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
+    el.classList.add('sel');
+  };
+});
+document.querySelectorAll('.st[data-status]').forEach(function(el) {
+  el.onclick = function() {
+    document.querySelectorAll('.st[data-status]').forEach(function(e){ e.classList.remove('sel'); });
+    el.classList.add('sel');
+  };
+});
+document.querySelectorAll('.st[data-type]').forEach(function(el) {
+  el.onclick = function() {
+    document.querySelectorAll('.st[data-type]').forEach(function(e){ e.classList.remove('sel'); });
+    el.classList.add('sel');
+  };
+});
+
+// 保存
+document.getElementById('saveBtn').onclick = function() {
+  var name = document.getElementById('iName').value.trim();
+  if (!name) { alert('銘柄名を入力してください'); return; }
+  var ce = document.querySelector('.cy.sel');
+  var se = document.querySelector('.st[data-status].sel');
+  var te = document.querySelector('.st[data-type].sel');
+  if (isEdit) {
+    var s = stocks.find(function(x){ return x.id === curId; });
+    s.name = name;
+    s.code = document.getElementById('iCode').value || '';
+    s.price = 0;
+    s.yield = parseFloat(document.getElementById('iYield').value) || 0;
+    s.target = parseFloat(document.getElementById('iTarget').value) || 0;
+    s.cycle = ce ? ce.dataset.cycle : '';
+    s.status = se ? se.dataset.status : '検討中';
+    s.type = te ? te.dataset.type : '';
+    document.getElementById('detTitle').textContent = s.name;
+    renderHist(s);
+  } else {
+    stocks.push({
+      id: Date.now().toString(), name: name,
+      code: document.getElementById('iCode').value || '',
+      price: 0,
+      yield: parseFloat(document.getElementById('iYield').value) || 0,
+      target: parseFloat(document.getElementById('iTarget').value) || 0,
+      cycle: ce ? ce.dataset.cycle : '',
+      status: se ? se.dataset.status : '検討中',
+      type: te ? te.dataset.type : '',
+      history: []
+    });
+  }
+  sv(); closeAdd(); renderAll();
+};
+
+// 詳細画面
+document.getElementById('backBtn').onclick = function() {
+  document.getElementById('detailView').className = 'detail-view';
+  curId = null; renderAll();
+};
+document.getElementById('editBtn').onclick = function() {
+  var s = stocks.find(function(x){ return x.id === curId; });
+  if (!s) return;
+  isEdit = true;
+  document.getElementById('sheetTitle').textContent = '✏️ 銘柄を編集';
+  document.getElementById('iName').value = s.name || '';
+  document.getElementById('iCode').value = s.code || '';
+  document.getElementById('iYield').value = s.yield || '';
+  document.getElementById('iTarget').value = s.target || '';
+  document.querySelectorAll('.cy').forEach(function(e){ e.classList.toggle('sel', e.dataset.cycle === s.cycle); });
+  document.querySelectorAll('.st[data-status]').forEach(function(e){ e.classList.toggle('sel', e.dataset.status === s.status); });
+  document.querySelectorAll('.st[data-type]').forEach(function(e){ e.classList.toggle('sel', e.dataset.type === s.type); });
+  document.getElementById('saveBtn').textContent = '✓ 保存する';
+  document.getElementById('addOverlay').className = 'overlay show';
+  document.getElementById('addSheet').style.display = 'block';
+};
+document.getElementById('delBtn').onclick = function() {
+  if (!confirm('削除しますか？')) return;
+  stocks = stocks.filter(function(x){ return x.id !== curId; });
+  sv();
+  document.getElementById('detailView').className = 'detail-view';
+  curId = null; renderAll();
+};
+
+// 購入履歴
+document.getElementById('histAddBtn').onclick = function() {
+  document.getElementById('hDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('hPrice').value = '';
+  document.getElementById('hShares').value = '';
+  document.getElementById('histOverlay').className = 'overlay show';
+  document.getElementById('histSheet').style.display = 'block';
+};
+document.getElementById('closeHistBtn').onclick = closeHist;
+document.getElementById('histOverlay').onclick = closeHist;
+function closeHist() {
+  document.getElementById('histOverlay').className = 'overlay';
+  document.getElementById('histSheet').style.display = 'none';
+}
+document.getElementById('saveHistBtn').onclick = function() {
+  var date = document.getElementById('hDate').value;
+  var price = parseFloat(document.getElementById('hPrice').value);
+  var shares = parseFloat(document.getElementById('hShares').value);
+  if (!date || !price || !shares) { alert('すべて入力してください'); return; }
+  var s = stocks.find(function(x){ return x.id === curId; });
+  if (!s.history) s.history = [];
+  s.history.push({date:date, price:price, shares:shares});
+  sv(); closeHist(); renderHist(s); renderStats();
+};
+
+// Yahoo!ボタン
+document.getElementById('yahooBtn').onclick = function() {
+  var s = stocks.find(function(x){ return x.id === curId; });
+  if (s && s.code) window.open('https://finance.yahoo.co.jp/quote/' + s.code + '.T');
+};
+
+function openDetail(id) {
+  var s = stocks.find(function(x){ return x.id === id; });
+  if (!s) return;
+  curId = id;
+  document.getElementById('detTitle').textContent = s.name;
+  document.getElementById('detCode').textContent = s.code || '未設定';
+  document.getElementById('detYield').textContent = s.yield ? s.yield + '%' : '未設定';
+  document.getElementById('detTarget').textContent = s.target ? '¥' + s.target.toLocaleString() : '未設定';
+  document.getElementById('detStatus').textContent = s.status || '未設定';
+  var tc = s.status==='購入済み' ? 'tag-bought' : s.status==='監視中' ? 'tag-watching' : 'tag-considering';
+  document.getElementById('detTags').innerHTML = (s.cycle ? '<span class="tag tag-cycle">'+s.cycle+'</span>' : '') + '<span class="tag '+tc+'">'+s.status+'</span>' + (s.type ? '<span class="tag '+(s.type==='ディフェンシブ'?'tag-defensive':'tag-sensitive')+'">'+s.type+'</span>' : '');
+  renderHist(s);
+  document.getElementById('detailView').className = 'detail-view show';
+}
+
+function renderHist(s) {
+  var list = document.getElementById('histList');
+  var h = s.history || [];
+  if (!h.length) { list.innerHTML = '<div class="hist-empty">まだ購入履歴がありません</div>'; return; }
+  list.innerHTML = h.map(function(x) {
+    return '<div class="hist-item"><div class="hist-top"><span class="hist-date">📅 '+x.date+'</span><span class="hist-total">¥'+(x.price*x.shares).toLocaleString()+'</span></div><div class="hist-sub">¥'+x.price.toLocaleString()+' × '+x.shares+'株</div></div>';
+  }).join('');
+}
+
+function renderAll() { renderStats(); renderStocks(); renderChart(); }
+
+function renderStats() {
+  var a = 0, t = 0;
+  stocks.forEach(function(s) {
+    (s.history||[]).forEach(function(h) { var v = h.price*h.shares*(s.yield/100); a+=v; t+=v; });
+  });
+  document.getElementById('sCount').textContent = stocks.length + '銘柄';
+  document.getElementById('sAnnual').textContent = '¥' + Math.round(a).toLocaleString();
+  document.getElementById('sTotal').textContent = '¥' + Math.round(t).toLocaleString();
+}
+
+function renderStocks() {
+  var list = document.getElementById('stockList');
+  var empty = document.getElementById('emptyStocks');
+  if (!stocks.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = stocks.map(function(s) {
+    var sc = s.status==='購入済み' ? 'bought' : s.status==='監視中' ? 'watching' : 'considering';
+    var tc = s.status==='購入済み' ? 'tag-bought' : s.status==='監視中' ? 'tag-watching' : 'tag-considering';
+    var avg = s.history&&s.history.length ? Math.round(s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0)) : null;
+    return '<div class="stock-card '+sc+'" onclick="openDetail(\''+s.id+'\')">' +
+      '<div class="tags"><span class="tag tag-code">'+(s.code||'----')+'</span><span class="tag '+tc+'">'+s.status+'</span>'+(s.cycle?'<span class="tag tag-cycle">'+s.cycle+'</span>':'')+(s.type?'<span class="tag '+(s.type==='ディフェンシブ'?'tag-defensive':'tag-sensitive')+'">'+s.type+'</span>':'')+'</div>' +
+      '<div class="stock-name">'+s.name+'<span style="color:#C9A84C">›</span></div>' +
+      '<div class="stock-prices">'+(avg?'<span>平均取得 <span class="pv" style="color:#C9A84C">¥'+avg.toLocaleString()+'</span></span>':'')+'<span>利回り <span class="yv">'+(s.yield||0)+'%</span></span></div>' +
+      '</div>';
+  }).join('');
+}
+
+function switchChart(n) {
+  document.getElementById('ctab1').className = 'chart-tab' + (n===1?' active':'');
+  document.getElementById('ctab2').className = 'chart-tab' + (n===2?' active':'');
+  document.getElementById('chart1').style.display = n===1?'block':'none';
+  document.getElementById('chart2').style.display = n===2?'block':'none';
+}
+
+function drawDonut(boxId, valId, legendId, cm, tv) {
+  var entries = Object.entries(cm);
+  var typeColors = {'ディフェンシブ':'#AD1457','景気敏感':'#2E7D32','未分類':'#9B9B9B'};
+  var gradParts = [], cumAngle = 0;
+  entries.forEach(function(e, i) {
+    var col = typeColors[e[0]] || CC[e[0]] || COLS[i % COLS.length];
+    var pct = e[1] / tv * 100;
+    gradParts.push(col + ' ' + cumAngle.toFixed(1) + '% ' + (cumAngle + pct).toFixed(1) + '%');
+    cumAngle += pct;
+  });
+  var box = document.getElementById(boxId);
+  box.style.background = 'conic-gradient(' + gradParts.join(', ') + ')';
+  box.style.position = 'relative';
+  var hole = box.querySelector('.donut-hole');
+  if (!hole) {
+    hole = document.createElement('div');
+    hole.className = 'donut-hole';
+    hole.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;border-radius:50%;background:#fff;z-index:1;';
+    box.appendChild(hole);
+  }
+  document.getElementById(valId).textContent = '¥' + tv.toLocaleString();
+  document.getElementById(legendId).innerHTML = entries.map(function(e, i) {
+    var col = typeColors[e[0]] || CC[e[0]] || COLS[i % COLS.length];
+    return '<div class="li"><div class="ld" style="background:' + col + '"></div><span class="ln">' + e[0] + '</span><span class="lp">' + Math.round(e[1] / tv * 100) + '%</span></div>';
+  }).join('');
+}
+
+function renderChart() {
+  var card = document.getElementById('chartCard');
+  if (!stocks.length) { card.style.display = 'none'; return; }
+  var cm1 = {}, tv1 = 0, cm2 = {}, tv2 = 0;
+  stocks.forEach(function(s) {
+    var invest = (s.history||[]).reduce(function(a,h){return a+h.price*h.shares;},0);
+    if (invest <= 0) return;
+    var k1 = s.cycle || '未分類';
+    cm1[k1] = (cm1[k1]||0) + invest; tv1 += invest;
+    var k2 = s.type || '未分類';
+    cm2[k2] = (cm2[k2]||0) + invest; tv2 += invest;
+  });
+  if (!tv1 && !tv2) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  if (tv1 > 0) drawDonut('donutBox1', 'donutVal1', 'donutLegend1', cm1, tv1);
+  if (tv2 > 0) drawDonut('donutBox2', 'donutVal2', 'donutLegend2', cm2, tv2);
+}
+
+function renderDiv() {
+  var list = document.getElementById('divList'), empty = document.getElementById('emptyDiv');
+  var items = stocks.filter(function(s){ return s.history&&s.history.length; });
+  if (!items.length) { list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  list.innerHTML = items.map(function(s) {
+    var ti = s.history.reduce(function(a,h){return a+h.price*h.shares;},0);
+    var ad = Math.round(ti*(s.yield/100));
+    return '<div class="div-card"><div class="div-head"><div class="div-name">'+s.name+'</div><div class="div-total">¥'+ad.toLocaleString()+'/年</div></div><div class="div-detail">投資額: ¥'+ti.toLocaleString()+' × '+s.yield+'%</div></div>';
+  }).join('');
+}
+
+renderAll();
+</script>
+</body>
+</html>
