@@ -102,6 +102,9 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 .div-name { font-size:16px; font-weight:700; }
 .div-total { font-size:18px; font-weight:900; color:#8B6914; }
 .div-detail { font-size:12px; color:#6B5C3E; }
+.change-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+.change-down { background:#FFEBEE; color:#C62828; }
+.change-up { background:#E8F5E9; color:#2E7D32; }
 </style>
 </head>
 <body>
@@ -169,6 +172,8 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div class="detail-row"><span class="dl">銘柄コード</span><span class="dv" id="detCode"></span></div>
     <div class="detail-row"><span class="dl">配当利回り</span><span class="dv" id="detYield"></span></div>
     <div class="detail-row"><span class="dl">目標株価</span><span class="dv" id="detTarget"></span></div>
+    <div class="detail-row"><span class="dl">現在株価</span><span class="dv" id="detCurrentPrice"></span></div>
+    <div class="detail-row"><span class="dl">平均取得比</span><span class="dv" id="detChange"></span></div>
     <div class="detail-row" style="border:none"><span class="dl">ステータス</span><span class="dv" id="detStatus"></span></div>
     <button class="yahoo-btn" id="yahooBtn">📊 Yahoo!ファイナンスで確認する ›</button>
     <div class="hist-head">
@@ -193,6 +198,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 
   <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
   <div class="fg"><label class="fl">🎯 目標株価（円）</label><input class="fi" id="iTarget" placeholder="例：2500" type="number"></div>
+  <div class="fg"><label class="fl">📉 現在株価（円）</label><input class="fi" id="iCurrentPrice" placeholder="例：2300" type="number"></div>
   <div class="fg">
     <label class="fl">🥮 景気サイクル</label>
     <div class="cycle-grid">
@@ -387,6 +393,7 @@ document.getElementById('addBtn').onclick = function() {
   document.getElementById('iCode').value = '';
   document.getElementById('iYield').value = '';
   document.getElementById('iTarget').value = '';
+  document.getElementById('iCurrentPrice').value = '';
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
   document.querySelectorAll('.st').forEach(function(e){ e.classList.remove('sel'); });  document.getElementById('saveBtn').textContent = '✓ 追加する';
   document.getElementById('addOverlay').className = 'overlay show';
@@ -434,6 +441,7 @@ document.getElementById('saveBtn').onclick = function() {
     s.price = 0;
     s.yield = parseFloat(document.getElementById('iYield').value) || 0;
     s.target = parseFloat(document.getElementById('iTarget').value) || 0;
+    s.currentPrice = parseFloat(document.getElementById('iCurrentPrice').value) || 0;
     s.cycle = ce ? ce.dataset.cycle : '';
     s.status = se ? se.dataset.status : '検討中';
     s.type = te ? te.dataset.type : '';
@@ -446,6 +454,7 @@ document.getElementById('saveBtn').onclick = function() {
       price: 0,
       yield: parseFloat(document.getElementById('iYield').value) || 0,
       target: parseFloat(document.getElementById('iTarget').value) || 0,
+      currentPrice: parseFloat(document.getElementById('iCurrentPrice').value) || 0,
       cycle: ce ? ce.dataset.cycle : '',
       status: se ? se.dataset.status : '検討中',
       type: te ? te.dataset.type : '',
@@ -469,6 +478,7 @@ document.getElementById('editBtn').onclick = function() {
   document.getElementById('iCode').value = s.code || '';
   document.getElementById('iYield').value = s.yield || '';
   document.getElementById('iTarget').value = s.target || '';
+  document.getElementById('iCurrentPrice').value = s.currentPrice || '';
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.toggle('sel', e.dataset.cycle === s.cycle); });
   document.querySelectorAll('.st[data-status]').forEach(function(e){ e.classList.toggle('sel', e.dataset.status === s.status); });
   document.querySelectorAll('.st[data-type]').forEach(function(e){ e.classList.toggle('sel', e.dataset.type === s.type); });
@@ -523,6 +533,17 @@ function openDetail(id) {
   document.getElementById('detCode').textContent = s.code || '未設定';
   document.getElementById('detYield').textContent = s.yield ? s.yield + '%' : '未設定';
   document.getElementById('detTarget').textContent = s.target ? '¥' + s.target.toLocaleString() : '未設定';
+  document.getElementById('detCurrentPrice').textContent = s.currentPrice ? '¥' + s.currentPrice.toLocaleString() : '未設定';
+  var avg2 = s.history&&s.history.length ? s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0) : null;
+  if (s.currentPrice && avg2) {
+    var rate2 = (s.currentPrice - avg2) / avg2 * 100;
+    var sign2 = rate2 >= 0 ? '+' : '';
+    var cls2 = rate2 >= 0 ? 'change-up' : 'change-down';
+    var label2 = rate2 >= 0 ? '上昇' : '下落';
+    document.getElementById('detChange').innerHTML = '<span class="change-badge ' + cls2 + '">' + sign2 + rate2.toFixed(2) + '%</span> <span style="font-size:12px;color:#6B5C3E">平均 ¥' + Math.round(avg2).toLocaleString() + ' 比</span>';
+  } else {
+    document.getElementById('detChange').textContent = '—';
+  }
   document.getElementById('detStatus').textContent = s.status || '未設定';
   var tc = s.status==='購入済み' ? 'tag-bought' : 'tag-considering';
   document.getElementById('detTags').innerHTML = (s.cycle ? '<span class="tag tag-cycle">'+s.cycle+'</span>' : '') + '<span class="tag '+tc+'">'+s.status+'</span>' + (s.type ? '<span class="tag '+(s.type==='ディフェンシブ'?'tag-defensive':'tag-sensitive')+'">'+s.type+'</span>' : '');
@@ -561,11 +582,18 @@ function renderStocks() {
   list.innerHTML = stocks.map(function(s) {
     var sc = s.status==='購入済み' ? 'bought' : 'considering';
     var tc = s.status==='購入済み' ? 'tag-bought' : 'tag-considering';
-    var avg = s.history&&s.history.length ? Math.round(s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0)) : null;
+    var avg = s.history&&s.history.length ? s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0) : null;
+    var changeBadge = '';
+    if (s.currentPrice && avg) {
+      var rate = (s.currentPrice - avg) / avg * 100;
+      var sign = rate >= 0 ? '+' : '';
+      var cls = rate >= 0 ? 'change-up' : 'change-down';
+      changeBadge = '<span class="change-badge ' + cls + '">' + sign + rate.toFixed(1) + '%</span>';
+    }
     return '<div class="stock-card '+sc+'" onclick="openDetail(\''+s.id+'\')">' +
       '<div class="tags"><span class="tag tag-code">'+(s.code||'----')+'</span><span class="tag '+tc+'">'+s.status+'</span>'+(s.cycle?'<span class="tag tag-cycle">'+s.cycle+'</span>':'')+(s.type?'<span class="tag '+(s.type==='ディフェンシブ'?'tag-defensive':'tag-sensitive')+'">'+s.type+'</span>':'')+'</div>' +
-      '<div class="stock-name">'+s.name+'<span style="color:#C9A84C">›</span></div>' +
-      '<div class="stock-prices">'+(avg?'<span>平均取得 <span class="pv" style="color:#C9A84C">¥'+avg.toLocaleString()+'</span></span>':'')+'<span>利回り <span class="yv">'+(s.yield||0)+'%</span></span></div>' +
+      '<div class="stock-name">'+s.name+'<span style="display:flex;align-items:center;gap:6px">'+changeBadge+'<span style="color:#C9A84C">›</span></span></div>' +
+      '<div class="stock-prices">'+(avg?'<span>平均取得 <span class="pv" style="color:#C9A84C">¥'+Math.round(avg).toLocaleString()+'</span></span>':'')+(s.currentPrice?'<span>現在 <span class="pv">¥'+s.currentPrice.toLocaleString()+'</span></span>':'')+'<span>利回り <span class="yv">'+(s.yield||0)+'%</span></span></div>' +
       '</div>';
   }).join('');
 }
