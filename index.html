@@ -136,9 +136,8 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     </div>
   </div>
   <div class="tabs">
-    <div class="tab active" id="tab1">📊 銘柄</div>
-    <div class="tab" id="tab2">⭐ 配当金</div>
-    <div class="tab" id="tab3">📅 カレンダー</div>
+    <div class="tab active" id="tab1">📊 銘柄管理</div>
+    <div class="tab" id="tab2">⭐ 配当金記録</div>
   </div>
   <div class="content">
     <div id="stocksTab">
@@ -168,12 +167,9 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
       <div class="empty" id="emptyStocks"><div class="empty-icon">🐑</div><div>右上の「＋ 追加」から<br>銘柄を登録しましょう！</div></div>
     </div>
     <div id="divTab" style="display:none">
+      <div class="cal-grid" id="calGrid" style="margin-bottom:16px"></div>
       <div id="divList"></div>
-      <div class="empty" id="emptyDiv"><div class="empty-icon">💴</div><div>購入履歴を追加すると<br>配当金が表示されます</div></div>
-    </div>
-    <div id="calTab" style="display:none">
-      <div class="cal-grid" id="calGrid"></div>
-      <div class="empty" id="emptyCal"><div class="empty-icon">📅</div><div>銘柄編集で配当月を設定すると<br>カレンダーが表示されます</div></div>
+      <div class="empty" id="emptyDiv" style="display:none"><div class="empty-icon">💴</div><div>購入履歴を追加すると<br>配当金が表示されます</div></div>
     </div>
   </div>
 </div>
@@ -403,28 +399,16 @@ function sv() { localStorage.setItem('wn', JSON.stringify(stocks)); }
 document.getElementById('tab1').onclick = function() {
   document.getElementById('tab1').className = 'tab active';
   document.getElementById('tab2').className = 'tab';
-  document.getElementById('tab3').className = 'tab';
   document.getElementById('stocksTab').style.display = 'block';
   document.getElementById('divTab').style.display = 'none';
-  document.getElementById('calTab').style.display = 'none';
 };
 document.getElementById('tab2').onclick = function() {
   document.getElementById('tab1').className = 'tab';
   document.getElementById('tab2').className = 'tab active';
-  document.getElementById('tab3').className = 'tab';
   document.getElementById('stocksTab').style.display = 'none';
   document.getElementById('divTab').style.display = 'block';
-  document.getElementById('calTab').style.display = 'none';
-  renderDiv();
-};
-document.getElementById('tab3').onclick = function() {
-  document.getElementById('tab1').className = 'tab';
-  document.getElementById('tab2').className = 'tab';
-  document.getElementById('tab3').className = 'tab active';
-  document.getElementById('stocksTab').style.display = 'none';
-  document.getElementById('divTab').style.display = 'none';
-  document.getElementById('calTab').style.display = 'block';
   renderCalendar();
+  renderDiv();
 };
 
 // 追加ボタン
@@ -728,10 +712,6 @@ function renderDiv() {
 
 function renderCalendar() {
   var grid = document.getElementById('calGrid');
-  var empty = document.getElementById('emptyCal');
-  var hasAny = stocks.some(function(s){ return s.divMonths && s.divMonths.length; });
-  if (!hasAny) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
   var curMonth = new Date().getMonth() + 1;
   var MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   grid.innerHTML = MONTHS.map(function(label, i) {
@@ -742,8 +722,8 @@ function renderCalendar() {
       return sum + (s.divMonths.length ? invest*(s.yield/100)/s.divMonths.length : 0);
     }, 0);
     var isCur = mn === curMonth;
-    return '<div class="cal-card' + (isCur?' current':'') + '">' +
-      '<div class="cal-month">' + label + (isCur ? ' ▶' : '') + '</div>' +
+    return '<div class="cal-card' + (isCur ? ' current' : '') + '">' +
+      '<div class="cal-month">' + label + (isCur ? ' ◀' : '') + '</div>' +
       '<div class="cal-body">' +
         (paying.length
           ? paying.map(function(s){ return '<div class="cal-stock">' + s.name + '</div>'; }).join('') +
