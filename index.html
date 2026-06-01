@@ -105,6 +105,19 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 .change-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
 .change-down { background:#FFEBEE; color:#C62828; }
 .change-up { background:#E8F5E9; color:#2E7D32; }
+.month-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+.mb { border:2px solid #E8DFC8; border-radius:8px; padding:6px 2px; text-align:center; font-size:12px; font-weight:700; cursor:pointer; color:#6B5C3E; }
+.mb.sel { border-color:#C9A84C; background:#FFFAED; color:#8B6914; }
+.cal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.cal-card { border-radius:12px; overflow:hidden; border:2px solid #E8DFC8; }
+.cal-card.current { border-color:#C9A84C; }
+.cal-month { padding:8px 10px; font-size:13px; font-weight:900; background:#F5F0E8; color:#6B5C3E; display:flex; justify-content:space-between; align-items:center; }
+.cal-card.current .cal-month { background:linear-gradient(135deg,#C9A84C,#F0D080); color:#fff; }
+.cal-body { padding:8px 10px; min-height:40px; background:#fff; }
+.cal-stock { font-size:11px; color:#1A1208; padding:2px 0; border-bottom:1px solid #F5F0E8; }
+.cal-stock:last-of-type { border-bottom:none; }
+.cal-total { font-size:12px; font-weight:900; color:#8B6914; margin-top:6px; text-align:right; }
+.cal-none { font-size:12px; color:#C8B89A; text-align:center; padding:4px 0; }
 </style>
 </head>
 <body>
@@ -123,8 +136,9 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     </div>
   </div>
   <div class="tabs">
-    <div class="tab active" id="tab1">📊 銘柄管理</div>
-    <div class="tab" id="tab2">⭐ 配当金記録</div>
+    <div class="tab active" id="tab1">📊 銘柄</div>
+    <div class="tab" id="tab2">⭐ 配当金</div>
+    <div class="tab" id="tab3">📅 カレンダー</div>
   </div>
   <div class="content">
     <div id="stocksTab">
@@ -156,6 +170,10 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div id="divTab" style="display:none">
       <div id="divList"></div>
       <div class="empty" id="emptyDiv"><div class="empty-icon">💴</div><div>購入履歴を追加すると<br>配当金が表示されます</div></div>
+    </div>
+    <div id="calTab" style="display:none">
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="empty" id="emptyCal"><div class="empty-icon">📅</div><div>銘柄編集で配当月を設定すると<br>カレンダーが表示されます</div></div>
     </div>
   </div>
 </div>
@@ -200,6 +218,15 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
   <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
   <div class="fg"><label class="fl">🎯 目標株価（円）</label><input class="fi" id="iTarget" placeholder="例：2500" type="number"></div>
   <div class="fg"><label class="fl">📉 現在株価（円）</label><input class="fi" id="iCurrentPrice" placeholder="例：2300" type="number"></div>
+  <div class="fg">
+    <label class="fl">📅 配当月（複数選択可）</label>
+    <div class="month-grid" id="monthGrid">
+      <div class="mb" data-m="1">1月</div><div class="mb" data-m="2">2月</div><div class="mb" data-m="3">3月</div>
+      <div class="mb" data-m="4">4月</div><div class="mb" data-m="5">5月</div><div class="mb" data-m="6">6月</div>
+      <div class="mb" data-m="7">7月</div><div class="mb" data-m="8">8月</div><div class="mb" data-m="9">9月</div>
+      <div class="mb" data-m="10">10月</div><div class="mb" data-m="11">11月</div><div class="mb" data-m="12">12月</div>
+    </div>
+  </div>
   <div class="fg"><label class="fl">📝 メモ</label><textarea class="fi" id="iMemo" placeholder="気になる点・購入理由など" rows="3" style="resize:none;line-height:1.5"></textarea></div>
   <div class="fg">
     <label class="fl">🥮 景気サイクル</label>
@@ -376,15 +403,28 @@ function sv() { localStorage.setItem('wn', JSON.stringify(stocks)); }
 document.getElementById('tab1').onclick = function() {
   document.getElementById('tab1').className = 'tab active';
   document.getElementById('tab2').className = 'tab';
+  document.getElementById('tab3').className = 'tab';
   document.getElementById('stocksTab').style.display = 'block';
   document.getElementById('divTab').style.display = 'none';
+  document.getElementById('calTab').style.display = 'none';
 };
 document.getElementById('tab2').onclick = function() {
   document.getElementById('tab1').className = 'tab';
   document.getElementById('tab2').className = 'tab active';
+  document.getElementById('tab3').className = 'tab';
   document.getElementById('stocksTab').style.display = 'none';
   document.getElementById('divTab').style.display = 'block';
+  document.getElementById('calTab').style.display = 'none';
   renderDiv();
+};
+document.getElementById('tab3').onclick = function() {
+  document.getElementById('tab1').className = 'tab';
+  document.getElementById('tab2').className = 'tab';
+  document.getElementById('tab3').className = 'tab active';
+  document.getElementById('stocksTab').style.display = 'none';
+  document.getElementById('divTab').style.display = 'none';
+  document.getElementById('calTab').style.display = 'block';
+  renderCalendar();
 };
 
 // 追加ボタン
@@ -397,6 +437,7 @@ document.getElementById('addBtn').onclick = function() {
   document.getElementById('iTarget').value = '';
   document.getElementById('iCurrentPrice').value = '';
   document.getElementById('iMemo').value = '';
+  setSelMonths([]);
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
   document.querySelectorAll('.st').forEach(function(e){ e.classList.remove('sel'); });  document.getElementById('saveBtn').textContent = '✓ 追加する';
   document.getElementById('addOverlay').className = 'overlay show';
@@ -408,6 +449,17 @@ document.getElementById('addOverlay').onclick = closeAdd;
 function closeAdd() {
   document.getElementById('addOverlay').className = 'overlay';
   document.getElementById('addSheet').style.display = 'none';
+}
+
+// 配当月トグル
+document.querySelectorAll('.mb').forEach(function(el) {
+  el.onclick = function() { el.classList.toggle('sel'); };
+});
+function getSelMonths() {
+  return Array.from(document.querySelectorAll('.mb.sel')).map(function(e){ return parseInt(e.dataset.m); });
+}
+function setSelMonths(months) {
+  document.querySelectorAll('.mb').forEach(function(e){ e.classList.toggle('sel', (months||[]).indexOf(parseInt(e.dataset.m)) >= 0); });
 }
 
 // サイクル・ステータス選択
@@ -446,6 +498,7 @@ document.getElementById('saveBtn').onclick = function() {
     s.target = parseFloat(document.getElementById('iTarget').value) || 0;
     s.currentPrice = parseFloat(document.getElementById('iCurrentPrice').value) || 0;
     s.memo = document.getElementById('iMemo').value.trim();
+    s.divMonths = getSelMonths();
     s.cycle = ce ? ce.dataset.cycle : '';
     s.status = se ? se.dataset.status : '検討中';
     s.type = te ? te.dataset.type : '';
@@ -460,6 +513,7 @@ document.getElementById('saveBtn').onclick = function() {
       target: parseFloat(document.getElementById('iTarget').value) || 0,
       currentPrice: parseFloat(document.getElementById('iCurrentPrice').value) || 0,
       memo: document.getElementById('iMemo').value.trim(),
+      divMonths: getSelMonths(),
       cycle: ce ? ce.dataset.cycle : '',
       status: se ? se.dataset.status : '検討中',
       type: te ? te.dataset.type : '',
@@ -485,6 +539,7 @@ document.getElementById('editBtn').onclick = function() {
   document.getElementById('iTarget').value = s.target || '';
   document.getElementById('iCurrentPrice').value = s.currentPrice || '';
   document.getElementById('iMemo').value = s.memo || '';
+  setSelMonths(s.divMonths || []);
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.toggle('sel', e.dataset.cycle === s.cycle); });
   document.querySelectorAll('.st[data-status]').forEach(function(e){ e.classList.toggle('sel', e.dataset.status === s.status); });
   document.querySelectorAll('.st[data-type]').forEach(function(e){ e.classList.toggle('sel', e.dataset.type === s.type); });
@@ -668,6 +723,33 @@ function renderDiv() {
     var ti = s.history.reduce(function(a,h){return a+h.price*h.shares;},0);
     var ad = Math.round(ti*(s.yield/100));
     return '<div class="div-card"><div class="div-head"><div class="div-name">'+s.name+'</div><div class="div-total">¥'+ad.toLocaleString()+'/年</div></div><div class="div-detail">投資額: ¥'+ti.toLocaleString()+' × '+s.yield+'%</div></div>';
+  }).join('');
+}
+
+function renderCalendar() {
+  var grid = document.getElementById('calGrid');
+  var empty = document.getElementById('emptyCal');
+  var hasAny = stocks.some(function(s){ return s.divMonths && s.divMonths.length; });
+  if (!hasAny) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  var curMonth = new Date().getMonth() + 1;
+  var MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  grid.innerHTML = MONTHS.map(function(label, i) {
+    var mn = i + 1;
+    var paying = stocks.filter(function(s){ return s.divMonths && s.divMonths.indexOf(mn) >= 0; });
+    var total = paying.reduce(function(sum, s) {
+      var invest = (s.history||[]).reduce(function(a,h){ return a+h.price*h.shares; }, 0);
+      return sum + (s.divMonths.length ? invest*(s.yield/100)/s.divMonths.length : 0);
+    }, 0);
+    var isCur = mn === curMonth;
+    return '<div class="cal-card' + (isCur?' current':'') + '">' +
+      '<div class="cal-month">' + label + (isCur ? ' ▶' : '') + '</div>' +
+      '<div class="cal-body">' +
+        (paying.length
+          ? paying.map(function(s){ return '<div class="cal-stock">' + s.name + '</div>'; }).join('') +
+            (total > 0 ? '<div class="cal-total">¥' + Math.round(total).toLocaleString() + '</div>' : '')
+          : '<div class="cal-none">—</div>') +
+      '</div></div>';
   }).join('');
 }
 
