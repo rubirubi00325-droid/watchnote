@@ -175,6 +175,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div class="detail-row"><span class="dl">現在株価</span><span class="dv" id="detCurrentPrice"></span></div>
     <div class="detail-row"><span class="dl">平均取得比</span><span class="dv" id="detChange"></span></div>
     <div class="detail-row" style="border:none"><span class="dl">ステータス</span><span class="dv" id="detStatus"></span></div>
+    <div id="detMemoWrap" style="display:none;background:#FFFAED;border-radius:12px;padding:14px;margin:14px 0;font-size:14px;color:#4A3800;line-height:1.6;white-space:pre-wrap;word-break:break-all" id="detMemo"></div>
     <button class="yahoo-btn" id="yahooBtn">📊 Yahoo!ファイナンスで確認する ›</button>
     <div class="hist-head">
       <div class="hist-title">📅 購入履歴</div>
@@ -199,6 +200,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
   <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
   <div class="fg"><label class="fl">🎯 目標株価（円）</label><input class="fi" id="iTarget" placeholder="例：2500" type="number"></div>
   <div class="fg"><label class="fl">📉 現在株価（円）</label><input class="fi" id="iCurrentPrice" placeholder="例：2300" type="number"></div>
+  <div class="fg"><label class="fl">📝 メモ</label><textarea class="fi" id="iMemo" placeholder="気になる点・購入理由など" rows="3" style="resize:none;line-height:1.5"></textarea></div>
   <div class="fg">
     <label class="fl">🥮 景気サイクル</label>
     <div class="cycle-grid">
@@ -394,6 +396,7 @@ document.getElementById('addBtn').onclick = function() {
   document.getElementById('iYield').value = '';
   document.getElementById('iTarget').value = '';
   document.getElementById('iCurrentPrice').value = '';
+  document.getElementById('iMemo').value = '';
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
   document.querySelectorAll('.st').forEach(function(e){ e.classList.remove('sel'); });  document.getElementById('saveBtn').textContent = '✓ 追加する';
   document.getElementById('addOverlay').className = 'overlay show';
@@ -442,6 +445,7 @@ document.getElementById('saveBtn').onclick = function() {
     s.yield = parseFloat(document.getElementById('iYield').value) || 0;
     s.target = parseFloat(document.getElementById('iTarget').value) || 0;
     s.currentPrice = parseFloat(document.getElementById('iCurrentPrice').value) || 0;
+    s.memo = document.getElementById('iMemo').value.trim();
     s.cycle = ce ? ce.dataset.cycle : '';
     s.status = se ? se.dataset.status : '検討中';
     s.type = te ? te.dataset.type : '';
@@ -455,6 +459,7 @@ document.getElementById('saveBtn').onclick = function() {
       yield: parseFloat(document.getElementById('iYield').value) || 0,
       target: parseFloat(document.getElementById('iTarget').value) || 0,
       currentPrice: parseFloat(document.getElementById('iCurrentPrice').value) || 0,
+      memo: document.getElementById('iMemo').value.trim(),
       cycle: ce ? ce.dataset.cycle : '',
       status: se ? se.dataset.status : '検討中',
       type: te ? te.dataset.type : '',
@@ -479,6 +484,7 @@ document.getElementById('editBtn').onclick = function() {
   document.getElementById('iYield').value = s.yield || '';
   document.getElementById('iTarget').value = s.target || '';
   document.getElementById('iCurrentPrice').value = s.currentPrice || '';
+  document.getElementById('iMemo').value = s.memo || '';
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.toggle('sel', e.dataset.cycle === s.cycle); });
   document.querySelectorAll('.st[data-status]').forEach(function(e){ e.classList.toggle('sel', e.dataset.status === s.status); });
   document.querySelectorAll('.st[data-type]').forEach(function(e){ e.classList.toggle('sel', e.dataset.type === s.type); });
@@ -545,6 +551,9 @@ function openDetail(id) {
     document.getElementById('detChange').textContent = '—';
   }
   document.getElementById('detStatus').textContent = s.status || '未設定';
+  var memoWrap = document.getElementById('detMemoWrap');
+  if (s.memo) { memoWrap.textContent = '📝 ' + s.memo; memoWrap.style.display = 'block'; }
+  else { memoWrap.style.display = 'none'; }
   var tc = s.status==='購入済み' ? 'tag-bought' : 'tag-considering';
   document.getElementById('detTags').innerHTML = (s.cycle ? '<span class="tag tag-cycle">'+s.cycle+'</span>' : '') + '<span class="tag '+tc+'">'+s.status+'</span>' + (s.type ? '<span class="tag '+(s.type==='ディフェンシブ'?'tag-defensive':'tag-sensitive')+'">'+s.type+'</span>' : '');
   renderHist(s);
