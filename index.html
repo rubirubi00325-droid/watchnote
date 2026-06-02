@@ -84,6 +84,11 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 .edit-btn { background:rgba(255,255,255,0.25); border:none; color:#fff; font-size:13px; font-weight:700; padding:8px 14px; border-radius:20px; cursor:pointer; }
 .detail-body { padding:20px; }
 .chart-card { background:#fff; border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.search-wrap { position:relative; margin-bottom:12px; }
+.search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:15px; pointer-events:none; }
+.search-input { width:100%; padding:12px 14px 12px 40px; border:2px solid #E8DFC8; border-radius:12px; font-size:14px; font-family:sans-serif; background:#fff; outline:none; color:#1A1208; -webkit-appearance:none; }
+.search-input:focus { border-color:#C9A84C; }
+.search-input::placeholder { color:#C8B89A; }
 .settings-card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
 .settings-title { font-size:15px; font-weight:900; color:#1A1208; margin-bottom:8px; }
 .settings-desc { font-size:12px; color:#6B5C3E; margin-bottom:20px; line-height:1.6; }
@@ -183,8 +188,13 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
           <div class="chart-dot" id="dot3"></div>
         </div>
       </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="searchInput" type="search" placeholder="銘柄名・コード・業種で検索..." oninput="renderStocks()">
+      </div>
       <div id="stockList"></div>
       <div class="empty" id="emptyStocks"><div class="empty-icon">🐑</div><div>右上の「＋ 追加」から<br>銘柄を登録しましょう！</div></div>
+      <div class="empty" id="emptySearch" style="display:none"><div class="empty-icon">🔍</div><div>該当する銘柄が見つかりません</div></div>
     </div>
     <div id="divTab" style="display:none">
       <div class="cal-grid" id="calGrid" style="margin-bottom:16px"></div>
@@ -693,9 +703,20 @@ function renderStats() {
 function renderStocks() {
   var list = document.getElementById('stockList');
   var empty = document.getElementById('emptyStocks');
-  if (!stocks.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+  var emptySearch = document.getElementById('emptySearch');
+  var q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  if (!stocks.length) { list.innerHTML = ''; empty.style.display = 'block'; emptySearch.style.display = 'none'; return; }
   empty.style.display = 'none';
-  list.innerHTML = stocks.map(function(s) {
+  var filtered = q ? stocks.filter(function(s) {
+    return (s.name||'').toLowerCase().includes(q) ||
+           (s.code||'').toLowerCase().includes(q) ||
+           (s.sector||'').toLowerCase().includes(q) ||
+           (s.cycle||'').toLowerCase().includes(q) ||
+           (s.type||'').toLowerCase().includes(q);
+  }) : stocks;
+  if (!filtered.length) { list.innerHTML = ''; emptySearch.style.display = 'block'; return; }
+  emptySearch.style.display = 'none';
+  list.innerHTML = filtered.map(function(s) {
     var sc = s.status==='購入済み' ? 'bought' : 'considering';
     var tc = s.status==='購入済み' ? 'tag-bought' : 'tag-considering';
     var avg = s.history&&s.history.length ? s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0) : null;
