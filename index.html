@@ -72,10 +72,13 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 .hist-add { background:#C9A84C; border:none; color:#fff; font-size:13px; font-weight:700; padding:8px 16px; border-radius:20px; cursor:pointer; }
 .hist-empty { background:#F5F0E8; border-radius:12px; padding:20px; text-align:center; color:#6B5C3E; font-size:13px; }
 .hist-item { background:#FAF8F2; border-radius:12px; padding:14px; margin-bottom:8px; }
-.hist-top { display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px; }
+.hist-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:13px; }
 .hist-date { color:#6B5C3E; }
 .hist-total { font-weight:700; color:#8B6914; }
 .hist-sub { font-size:12px; color:#6B5C3E; }
+.hist-actions { display:flex; gap:6px; margin-top:8px; }
+.hist-edit-btn { flex:1; padding:6px; border-radius:8px; border:1.5px solid #C9A84C; background:#fff; color:#8B6914; font-size:12px; font-weight:700; cursor:pointer; }
+.hist-del-btn { flex:1; padding:6px; border-radius:8px; border:1.5px solid #FFCDD2; background:#fff; color:#C62828; font-size:12px; font-weight:700; cursor:pointer; }
 .detail-view { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#FAF8F2; z-index:50; overflow-y:auto; max-width:430px; left:50%; transform:translateX(-50%); }
 .detail-view.show { display:block; }
 .detail-header { background:linear-gradient(135deg,#8B6914,#C9A84C); padding:48px 20px 20px; display:flex; justify-content:space-between; align-items:center; }
@@ -240,6 +243,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div class="tags" id="detTags" style="margin-bottom:12px"></div>
     <div class="detail-row"><span class="dl">銘柄コード</span><span class="dv" id="detCode"></span></div>
     <div class="detail-row"><span class="dl">配当利回り</span><span class="dv" id="detYield"></span></div>
+    <div class="detail-row"><span class="dl">購入日</span><span class="dv" id="detPurchaseDate"></span></div>
     <div class="detail-row"><span class="dl">購入株価</span><span class="dv" id="detPurchasePrice"></span></div>
     <div class="detail-row"><span class="dl">購入株数</span><span class="dv" id="detShares"></span></div>
     <div class="detail-row"><span class="dl">平均取得比</span><span class="dv" id="detChange"></span></div>
@@ -271,6 +275,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div class="fg"><label class="fl">💴 購入株価（円）</label><input class="fi" id="iPurchasePrice" placeholder="例：2300" type="number"></div>
     <div class="fg"><label class="fl">📊 購入株数（株）</label><input class="fi" id="iShares" placeholder="例：100" type="number"></div>
   </div>
+  <div class="fg"><label class="fl">📅 購入日</label><input class="fi" id="iPurchaseDate" type="date"></div>
   <div class="fg">
     <label class="fl">📅 配当月（複数選択可）</label>
     <div class="month-grid" id="monthGrid">
@@ -312,7 +317,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 <div class="overlay" id="histOverlay"></div>
 <div class="sheet" id="histSheet" style="display:none">
   <div class="sheet-title">
-    <span>📅 購入履歴を追加</span>
+    <span id="histSheetTitle">📅 購入履歴を追加</span>
     <button class="close-btn" id="closeHistBtn">×</button>
   </div>
   <div class="fg"><label class="fl">📅 購入日</label><input class="fi" id="hDate" type="date"></div>
@@ -513,6 +518,7 @@ document.getElementById('addBtn').onclick = function() {
   document.getElementById('iYield').value = '';
   document.getElementById('iPurchasePrice').value = '';
   document.getElementById('iShares').value = '';
+  document.getElementById('iPurchaseDate').value = '';
   document.getElementById('iMemo').value = '';
   setSelMonths([]);
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
@@ -574,6 +580,7 @@ document.getElementById('saveBtn').onclick = function() {
     s.yield = parseFloat(document.getElementById('iYield').value) || 0;
     s.purchasePrice = parseFloat(document.getElementById('iPurchasePrice').value) || 0;
     s.shares = parseInt(document.getElementById('iShares').value) || 0;
+    s.purchaseDate = document.getElementById('iPurchaseDate').value || '';
     s.memo = document.getElementById('iMemo').value.trim();
     s.divMonths = getSelMonths();
     s.cycle = ce ? ce.dataset.cycle : '';
@@ -590,6 +597,7 @@ document.getElementById('saveBtn').onclick = function() {
       yield: parseFloat(document.getElementById('iYield').value) || 0,
       purchasePrice: parseFloat(document.getElementById('iPurchasePrice').value) || 0,
       shares: parseInt(document.getElementById('iShares').value) || 0,
+      purchaseDate: document.getElementById('iPurchaseDate').value || '',
       memo: document.getElementById('iMemo').value.trim(),
       divMonths: getSelMonths(),
       cycle: ce ? ce.dataset.cycle : '',
@@ -617,6 +625,7 @@ document.getElementById('editBtn').onclick = function() {
   document.getElementById('iYield').value = s.yield || '';
   document.getElementById('iPurchasePrice').value = s.purchasePrice || '';
   document.getElementById('iShares').value = s.shares || '';
+  document.getElementById('iPurchaseDate').value = s.purchaseDate || '';
   document.getElementById('iMemo').value = s.memo || '';
   document.getElementById('iSector').value = s.sector || '';
   setSelMonths(s.divMonths || []);
@@ -636,18 +645,36 @@ document.getElementById('delBtn').onclick = function() {
 };
 
 // 購入履歴
-document.getElementById('histAddBtn').onclick = function() {
-  document.getElementById('hDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('hPrice').value = '';
-  document.getElementById('hShares').value = '';
+var editHistIdx = -1;
+
+function openHistSheet(idx) {
+  var s = stocks.find(function(x){ return x.id === curId; });
+  editHistIdx = idx;
+  if (idx >= 0 && s && s.history[idx]) {
+    var h = s.history[idx];
+    document.getElementById('histSheetTitle').textContent = '✏️ 購入履歴を編集';
+    document.getElementById('saveHistBtn').textContent = '✓ 保存する';
+    document.getElementById('hDate').value = h.date || '';
+    document.getElementById('hPrice').value = h.price || '';
+    document.getElementById('hShares').value = h.shares || '';
+  } else {
+    document.getElementById('histSheetTitle').textContent = '📅 購入履歴を追加';
+    document.getElementById('saveHistBtn').textContent = '✓ 追加する';
+    document.getElementById('hDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('hPrice').value = '';
+    document.getElementById('hShares').value = '';
+  }
   document.getElementById('histOverlay').className = 'overlay show';
   document.getElementById('histSheet').style.display = 'block';
-};
+}
+
+document.getElementById('histAddBtn').onclick = function() { openHistSheet(-1); };
 document.getElementById('closeHistBtn').onclick = closeHist;
 document.getElementById('histOverlay').onclick = closeHist;
 function closeHist() {
   document.getElementById('histOverlay').className = 'overlay';
   document.getElementById('histSheet').style.display = 'none';
+  editHistIdx = -1;
 }
 document.getElementById('saveHistBtn').onclick = function() {
   var date = document.getElementById('hDate').value;
@@ -656,7 +683,11 @@ document.getElementById('saveHistBtn').onclick = function() {
   if (!date || !price || !shares) { alert('すべて入力してください'); return; }
   var s = stocks.find(function(x){ return x.id === curId; });
   if (!s.history) s.history = [];
-  s.history.push({date:date, price:price, shares:shares});
+  if (editHistIdx >= 0) {
+    s.history[editHistIdx] = {date:date, price:price, shares:shares};
+  } else {
+    s.history.push({date:date, price:price, shares:shares});
+  }
   sv(); closeHist(); renderHist(s); renderStats();
 };
 
@@ -673,6 +704,7 @@ function openDetail(id) {
   document.getElementById('detTitle').textContent = s.name;
   document.getElementById('detCode').textContent = s.code || '未設定';
   document.getElementById('detYield').textContent = s.yield ? s.yield + '%' : '未設定';
+  document.getElementById('detPurchaseDate').textContent = s.purchaseDate || '未設定';
   document.getElementById('detPurchasePrice').textContent = s.purchasePrice ? '¥' + s.purchasePrice.toLocaleString() : '未設定';
   document.getElementById('detShares').textContent = s.shares ? s.shares.toLocaleString() + '株' : '未設定';
   var avg2 = s.history&&s.history.length ? s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0) : null;
@@ -699,9 +731,23 @@ function renderHist(s) {
   var list = document.getElementById('histList');
   var h = s.history || [];
   if (!h.length) { list.innerHTML = '<div class="hist-empty">まだ購入履歴がありません</div>'; return; }
-  list.innerHTML = h.map(function(x) {
-    return '<div class="hist-item"><div class="hist-top"><span class="hist-date">📅 '+x.date+'</span><span class="hist-total">¥'+(x.price*x.shares).toLocaleString()+'</span></div><div class="hist-sub">¥'+x.price.toLocaleString()+' × '+x.shares+'株</div></div>';
+  list.innerHTML = h.map(function(x, i) {
+    return '<div class="hist-item">' +
+      '<div class="hist-top"><span class="hist-date">📅 '+x.date+'</span><span class="hist-total">¥'+(x.price*x.shares).toLocaleString()+'</span></div>' +
+      '<div class="hist-sub">¥'+x.price.toLocaleString()+' × '+x.shares+'株</div>' +
+      '<div class="hist-actions">' +
+        '<button class="hist-edit-btn" onclick="openHistSheet('+i+')">✏️ 編集</button>' +
+        '<button class="hist-del-btn" onclick="deleteHist('+i+')">🗑 削除</button>' +
+      '</div>' +
+    '</div>';
   }).join('');
+}
+
+function deleteHist(idx) {
+  if (!confirm('この購入履歴を削除しますか？')) return;
+  var s = stocks.find(function(x){ return x.id === curId; });
+  s.history.splice(idx, 1);
+  sv(); renderHist(s); renderStats();
 }
 
 function renderAll() { renderStats(); renderStocks(); renderChart(); }
