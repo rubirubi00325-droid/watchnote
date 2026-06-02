@@ -240,8 +240,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div class="tags" id="detTags" style="margin-bottom:12px"></div>
     <div class="detail-row"><span class="dl">銘柄コード</span><span class="dv" id="detCode"></span></div>
     <div class="detail-row"><span class="dl">配当利回り</span><span class="dv" id="detYield"></span></div>
-    <div class="detail-row"><span class="dl">目標株価</span><span class="dv" id="detTarget"></span></div>
-    <div class="detail-row"><span class="dl">現在株価</span><span class="dv" id="detCurrentPrice"></span></div>
+    <div class="detail-row"><span class="dl">購入株価</span><span class="dv" id="detPurchasePrice"></span></div>
     <div class="detail-row"><span class="dl">平均取得比</span><span class="dv" id="detChange"></span></div>
     <div class="detail-row" style="border:none"><span class="dl">ステータス</span><span class="dv" id="detStatus"></span></div>
     <div id="detMemoWrap" style="display:none;background:#FFFAED;border-radius:12px;padding:14px;margin:14px 0;font-size:14px;color:#4A3800;line-height:1.6;white-space:pre-wrap;word-break:break-all" id="detMemo"></div>
@@ -267,8 +266,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
   <div id="autoClassifyNote" style="font-size:11px;color:#C9A84C;margin:-8px 0 12px;display:none">✨ 自動分類しました！</div>
 
   <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
-  <div class="fg"><label class="fl">🎯 目標株価（円）</label><input class="fi" id="iTarget" placeholder="例：2500" type="number"></div>
-  <div class="fg"><label class="fl">📉 現在株価（円）</label><input class="fi" id="iCurrentPrice" placeholder="例：2300" type="number"></div>
+  <div class="fg"><label class="fl">💴 購入株価（円）</label><input class="fi" id="iPurchasePrice" placeholder="例：2300" type="number"></div>
   <div class="fg">
     <label class="fl">📅 配当月（複数選択可）</label>
     <div class="month-grid" id="monthGrid">
@@ -509,8 +507,7 @@ document.getElementById('addBtn').onclick = function() {
   document.getElementById('iName').value = '';
   document.getElementById('iCode').value = '';
   document.getElementById('iYield').value = '';
-  document.getElementById('iTarget').value = '';
-  document.getElementById('iCurrentPrice').value = '';
+  document.getElementById('iPurchasePrice').value = '';
   document.getElementById('iMemo').value = '';
   setSelMonths([]);
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
@@ -570,8 +567,7 @@ document.getElementById('saveBtn').onclick = function() {
     s.code = document.getElementById('iCode').value || '';
     s.price = 0;
     s.yield = parseFloat(document.getElementById('iYield').value) || 0;
-    s.target = parseFloat(document.getElementById('iTarget').value) || 0;
-    s.currentPrice = parseFloat(document.getElementById('iCurrentPrice').value) || 0;
+    s.purchasePrice = parseFloat(document.getElementById('iPurchasePrice').value) || 0;
     s.memo = document.getElementById('iMemo').value.trim();
     s.divMonths = getSelMonths();
     s.cycle = ce ? ce.dataset.cycle : '';
@@ -586,8 +582,7 @@ document.getElementById('saveBtn').onclick = function() {
       code: document.getElementById('iCode').value || '',
       price: 0,
       yield: parseFloat(document.getElementById('iYield').value) || 0,
-      target: parseFloat(document.getElementById('iTarget').value) || 0,
-      currentPrice: parseFloat(document.getElementById('iCurrentPrice').value) || 0,
+      purchasePrice: parseFloat(document.getElementById('iPurchasePrice').value) || 0,
       memo: document.getElementById('iMemo').value.trim(),
       divMonths: getSelMonths(),
       cycle: ce ? ce.dataset.cycle : '',
@@ -613,8 +608,7 @@ document.getElementById('editBtn').onclick = function() {
   document.getElementById('iName').value = s.name || '';
   document.getElementById('iCode').value = s.code || '';
   document.getElementById('iYield').value = s.yield || '';
-  document.getElementById('iTarget').value = s.target || '';
-  document.getElementById('iCurrentPrice').value = s.currentPrice || '';
+  document.getElementById('iPurchasePrice').value = s.purchasePrice || '';
   document.getElementById('iMemo').value = s.memo || '';
   document.getElementById('iSector').value = s.sector || '';
   setSelMonths(s.divMonths || []);
@@ -671,17 +665,16 @@ function openDetail(id) {
   document.getElementById('detTitle').textContent = s.name;
   document.getElementById('detCode').textContent = s.code || '未設定';
   document.getElementById('detYield').textContent = s.yield ? s.yield + '%' : '未設定';
-  document.getElementById('detTarget').textContent = s.target ? '¥' + s.target.toLocaleString() : '未設定';
-  document.getElementById('detCurrentPrice').textContent = s.currentPrice ? '¥' + s.currentPrice.toLocaleString() : '未設定';
+  document.getElementById('detPurchasePrice').textContent = s.purchasePrice ? '¥' + s.purchasePrice.toLocaleString() : '未設定';
   var avg2 = s.history&&s.history.length ? s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0) : null;
-  if (s.currentPrice && avg2) {
-    var rate2 = (s.currentPrice - avg2) / avg2 * 100;
+  var basePrice = avg2 || s.purchasePrice || null;
+  if (s.purchasePrice && basePrice && basePrice !== s.purchasePrice) {
+    var rate2 = (s.purchasePrice - basePrice) / basePrice * 100;
     var sign2 = rate2 >= 0 ? '+' : '';
     var cls2 = rate2 >= 0 ? 'change-up' : 'change-down';
-    var label2 = rate2 >= 0 ? '上昇' : '下落';
-    document.getElementById('detChange').innerHTML = '<span class="change-badge ' + cls2 + '">' + sign2 + rate2.toFixed(2) + '%</span> <span style="font-size:12px;color:#6B5C3E">平均 ¥' + Math.round(avg2).toLocaleString() + ' 比</span>';
+    document.getElementById('detChange').innerHTML = '<span class="change-badge ' + cls2 + '">' + sign2 + rate2.toFixed(2) + '%</span> <span style="font-size:12px;color:#6B5C3E">平均 ¥' + Math.round(basePrice).toLocaleString() + ' 比</span>';
   } else {
-    document.getElementById('detChange').textContent = '—';
+    document.getElementById('detChange').textContent = avg2 ? '平均取得 ¥' + Math.round(avg2).toLocaleString() : '—';
   }
   document.getElementById('detStatus').textContent = s.status || '未設定';
   var memoWrap = document.getElementById('detMemoWrap');
@@ -764,8 +757,8 @@ function renderStocks() {
     var tc = s.status==='購入済み' ? 'tag-bought' : 'tag-considering';
     var avg = s.history&&s.history.length ? s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0) : null;
     var changeBadge = '';
-    if (s.currentPrice && avg) {
-      var rate = (s.currentPrice - avg) / avg * 100;
+    if (s.purchasePrice && avg) {
+      var rate = (s.purchasePrice - avg) / avg * 100;
       var sign = rate >= 0 ? '+' : '';
       var cls = rate >= 0 ? 'change-up' : 'change-down';
       changeBadge = '<span class="change-badge ' + cls + '">' + sign + rate.toFixed(1) + '%</span>';
@@ -773,7 +766,7 @@ function renderStocks() {
     return '<div class="stock-card '+sc+'" onclick="openDetail(\''+s.id+'\')">' +
       '<div class="tags"><span class="tag tag-code">'+(s.code||'----')+'</span><span class="tag '+tc+'">'+s.status+'</span>'+(s.cycle?'<span class="tag tag-cycle">'+s.cycle+'</span>':'')+(s.type?'<span class="tag '+(s.type==='ディフェンシブ'?'tag-defensive':'tag-sensitive')+'">'+s.type+'</span>':'')+'</div>' +
       '<div class="stock-name">'+s.name+'<span style="display:flex;align-items:center;gap:6px">'+changeBadge+'<span style="color:#C9A84C">›</span></span></div>' +
-      '<div class="stock-prices">'+(avg?'<span>平均取得 <span class="pv" style="color:#C9A84C">¥'+Math.round(avg).toLocaleString()+'</span></span>':'')+(s.currentPrice?'<span>現在 <span class="pv">¥'+s.currentPrice.toLocaleString()+'</span></span>':'')+'<span>利回り <span class="yv">'+(s.yield||0)+'%</span></span></div>' +
+      '<div class="stock-prices">'+(avg?'<span>平均取得 <span class="pv" style="color:#C9A84C">¥'+Math.round(avg).toLocaleString()+'</span></span>':'')+(s.purchasePrice?'<span>購入 <span class="pv">¥'+s.purchasePrice.toLocaleString()+'</span></span>':'')+'<span>利回り <span class="yv">'+(s.yield||0)+'%</span></span></div>' +
       '</div>';
   }).join('');
 }
