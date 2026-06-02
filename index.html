@@ -84,9 +84,13 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 .edit-btn { background:rgba(255,255,255,0.25); border:none; color:#fff; font-size:13px; font-weight:700; padding:8px 14px; border-radius:20px; cursor:pointer; }
 .detail-body { padding:20px; }
 .chart-card { background:#fff; border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-.chart-tabs { display:flex; gap:8px; margin-bottom:16px; }
-.chart-tab { flex:1; text-align:center; padding:8px; border-radius:20px; font-size:12px; font-weight:700; cursor:pointer; background:#F5F0E8; color:#6B5C3E; }
-.chart-tab.active { background:linear-gradient(135deg,#C9A84C,#F0D080); color:#fff; }
+.chart-swipe-wrap { overflow:hidden; width:100%; }
+.chart-swipe-track { display:flex; transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); will-change:transform; }
+.chart-slide { min-width:100%; flex-shrink:0; }
+.chart-dots { display:flex; justify-content:center; gap:6px; margin-top:12px; }
+.chart-dot { width:7px; height:7px; border-radius:50%; background:#E8DFC8; transition:all 0.2s; }
+.chart-dot.active { background:linear-gradient(135deg,#C9A84C,#F0D080); width:18px; border-radius:4px; }
+.chart-label { text-align:center; font-size:12px; font-weight:700; color:#8B6914; margin-bottom:12px; }
 .donut-wrap { display:flex; align-items:center; gap:20px; }
 .donut-box { position:relative; width:110px; height:110px; flex-shrink:0; border-radius:50%; }
 .donut-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:2; }
@@ -142,31 +146,33 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
   <div class="content">
     <div id="stocksTab">
       <div class="chart-card" id="chartCard" style="display:none">
-        <div class="chart-tabs">
-          <div class="chart-tab active" id="ctab1" onclick="switchChart(1)">🥮 景気サイクル</div>
-          <div class="chart-tab" id="ctab2" onclick="switchChart(2)">🛡 銘柄タイプ</div>
-          <div class="chart-tab" id="ctab3" onclick="switchChart(3)">🏭 セクター</div>
-        </div>
-        <div id="chart1">
-          <div class="donut-wrap">
-            <div class="donut-box" id="donutBox1">
+        <div id="chartLabel" class="chart-label">🥮 景気サイクル</div>
+        <div class="chart-swipe-wrap" id="chartSwipeWrap">
+          <div class="chart-swipe-track" id="chartTrack">
+            <div class="chart-slide">
+              <div class="donut-wrap">
+                <div class="donut-box" id="donutBox1"></div>
+                <div class="legend" id="donutLegend1"></div>
+              </div>
             </div>
-            <div class="legend" id="donutLegend1"></div>
+            <div class="chart-slide">
+              <div class="donut-wrap">
+                <div class="donut-box" id="donutBox2"></div>
+                <div class="legend" id="donutLegend2"></div>
+              </div>
+            </div>
+            <div class="chart-slide">
+              <div class="donut-wrap">
+                <div class="donut-box" id="donutBox3"></div>
+                <div class="legend" id="donutLegend3"></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div id="chart2" style="display:none">
-          <div class="donut-wrap">
-            <div class="donut-box" id="donutBox2">
-            </div>
-            <div class="legend" id="donutLegend2"></div>
-          </div>
-        </div>
-        <div id="chart3" style="display:none">
-          <div class="donut-wrap">
-            <div class="donut-box" id="donutBox3">
-            </div>
-            <div class="legend" id="donutLegend3"></div>
-          </div>
+        <div class="chart-dots">
+          <div class="chart-dot active" id="dot1"></div>
+          <div class="chart-dot" id="dot2"></div>
+          <div class="chart-dot" id="dot3"></div>
         </div>
       </div>
       <div id="stockList"></div>
@@ -656,14 +662,40 @@ function renderStocks() {
   }).join('');
 }
 
+var chartIndex = 0;
+var chartLabels = ['🥮 景気サイクル','🛡 銘柄タイプ','🏭 セクター'];
+
 function switchChart(n) {
-  document.getElementById('ctab1').className = 'chart-tab' + (n===1?' active':'');
-  document.getElementById('ctab2').className = 'chart-tab' + (n===2?' active':'');
-  document.getElementById('ctab3').className = 'chart-tab' + (n===3?' active':'');
-  document.getElementById('chart1').style.display = n===1?'block':'none';
-  document.getElementById('chart2').style.display = n===2?'block':'none';
-  document.getElementById('chart3').style.display = n===3?'block':'none';
+  chartIndex = n;
+  document.getElementById('chartTrack').style.transform = 'translateX(-' + (n * 100) + '%)';
+  document.getElementById('chartLabel').textContent = chartLabels[n];
+  [0,1,2].forEach(function(i) {
+    document.getElementById('dot'+(i+1)).className = 'chart-dot' + (i===n?' active':'');
+  });
 }
+
+// スワイプ処理
+(function() {
+  var wrap = document.getElementById('chartSwipeWrap');
+  var startX = 0, isDragging = false;
+  function onStart(e) {
+    startX = (e.touches ? e.touches[0].clientX : e.clientX);
+    isDragging = true;
+  }
+  function onEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    var endX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
+    var diff = startX - endX;
+    if (Math.abs(diff) < 40) return;
+    if (diff > 0 && chartIndex < 2) switchChart(chartIndex + 1);
+    if (diff < 0 && chartIndex > 0) switchChart(chartIndex - 1);
+  }
+  wrap.addEventListener('touchstart', onStart, {passive:true});
+  wrap.addEventListener('touchend', onEnd);
+  wrap.addEventListener('mousedown', onStart);
+  wrap.addEventListener('mouseup', onEnd);
+})();
 
 function drawDonut(boxId, valId, legendId, cm, tv) {
   var entries = Object.entries(cm);
