@@ -132,7 +132,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div class="stats">
       <div class="stat"><div class="stat-label">購入済み</div><div class="stat-value" id="sCount">0銘柄</div></div>
       <div class="stat"><div class="stat-label">検討中</div><div class="stat-value" id="sConsidering">0銘柄</div></div>
-      <div class="stat"><div class="stat-label">年間配当</div><div class="stat-value" id="sAnnual">¥0</div></div>
+      <div class="stat"><div class="stat-label">投資総額</div><div class="stat-value" id="sAnnual">¥0</div></div>
     </div>
   </div>
   <div class="tabs">
@@ -615,7 +615,7 @@ function renderStats() {
   var considering = stocks.filter(function(s){ return s.status==='検討中'; }).length;
   var a = 0;
   stocks.forEach(function(s) {
-    (s.history||[]).forEach(function(h) { a += h.price*h.shares*(s.yield/100); });
+    (s.history||[]).forEach(function(h) { a += h.price * h.shares; });
   });
   document.getElementById('sCount').textContent = bought + '銘柄';
   document.getElementById('sConsidering').textContent = considering + '銘柄';
