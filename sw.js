@@ -1,4 +1,4 @@
-const CACHE_NAME = 'watch-note-v1';
+const CACHE_NAME = 'watch-note-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',

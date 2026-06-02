@@ -697,13 +697,17 @@ function renderHist(s) {
 
 function renderAll() { renderStats(); renderStocks(); renderChart(); }
 
+function getInvest(s) {
+  var fromHistory = (s.history||[]).reduce(function(a,h){ return a + h.price * h.shares; }, 0);
+  if (fromHistory > 0) return fromHistory;
+  return s.purchasePrice || 0;
+}
+
 function renderStats() {
   var bought = stocks.filter(function(s){ return s.status==='購入済み'; }).length;
   var considering = stocks.filter(function(s){ return s.status==='検討中'; }).length;
   var a = 0;
-  stocks.forEach(function(s) {
-    (s.history||[]).forEach(function(h) { a += h.price * h.shares; });
-  });
+  stocks.forEach(function(s) { a += getInvest(s); });
   document.getElementById('sCount').textContent = bought + '銘柄';
   document.getElementById('sConsidering').textContent = considering + '銘柄';
   document.getElementById('sAnnual').textContent = '¥' + Math.round(a).toLocaleString();
@@ -838,7 +842,7 @@ function renderChart() {
   if (!stocks.length) { card.style.display = 'none'; return; }
   var cm1 = {}, tv1 = 0, cm2 = {}, tv2 = 0, cm3 = {}, tv3 = 0;
   stocks.forEach(function(s) {
-    var invest = (s.history||[]).reduce(function(a,h){return a+h.price*h.shares;},0);
+    var invest = getInvest(s);
     if (invest <= 0) return;
     var k1 = s.cycle || '未分類';
     cm1[k1] = (cm1[k1]||0) + invest; tv1 += invest;
