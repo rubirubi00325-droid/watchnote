@@ -269,13 +269,12 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
   <div class="fg"><label class="fl">📌 銘柄名（必須）</label><input class="fi" id="iName" placeholder="例：三菱商事"></div>
   <div class="fg"><label class="fl">🔢 銘柄コード</label><input class="fi" id="iCode" placeholder="例：8058" type="number" oninput="autoClassify()"></div>
   <div id="autoClassifyNote" style="font-size:11px;color:#C9A84C;margin:-8px 0 12px;display:none">✨ 自動分類しました！</div>
-
-  <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="fg"><label class="fl">💴 購入株価（円）</label><input class="fi" id="iPurchasePrice" placeholder="例：2300" type="number"></div>
     <div class="fg"><label class="fl">📊 購入株数（株）</label><input class="fi" id="iShares" placeholder="例：100" type="number"></div>
   </div>
   <div class="fg"><label class="fl">📅 購入日</label><input class="fi" id="iPurchaseDate" type="date"></div>
+  <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
   <div class="fg">
     <label class="fl">📅 配当月（複数選択可）</label>
     <div class="month-grid" id="monthGrid">
@@ -285,8 +284,6 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
       <div class="mb" data-m="10">10月</div><div class="mb" data-m="11">11月</div><div class="mb" data-m="12">12月</div>
     </div>
   </div>
-  <div class="fg"><label class="fl">🏭 業種（セクター）</label><select class="fi" id="iSector"><option value="">未設定</option><option>水産・農林業</option><option>鉱業</option><option>建設業</option><option>食料品</option><option>繊維製品</option><option>パルプ・紙</option><option>化学</option><option>医薬品</option><option>石油・石炭製品</option><option>ゴム製品</option><option>ガラス・土石製品</option><option>鉄鋼</option><option>非鉄金属</option><option>金属製品</option><option>機械</option><option>電気機器</option><option>輸送用機器</option><option>精密機器</option><option>その他製品</option><option>電気・ガス業</option><option>陸運業</option><option>海運業</option><option>空運業</option><option>倉庫・運輸関連</option><option>情報・通信業</option><option>卸売業</option><option>小売業</option><option>銀行業</option><option>証券・商品先物</option><option>保険業</option><option>その他金融業</option><option>不動産業</option><option>サービス業</option></select></div>
-  <div class="fg"><label class="fl">📝 メモ</label><textarea class="fi" id="iMemo" placeholder="気になる点・購入理由など" rows="3" style="resize:none;line-height:1.5"></textarea></div>
   <div class="fg">
     <label class="fl">🥮 景気サイクル</label>
     <div class="cycle-grid">
@@ -297,19 +294,21 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     </div>
   </div>
   <div class="fg">
-    <label class="fl">📋 ステータス</label>
-    <div class="st-row">
-      <div class="st" data-status="購入済み">購入済み</div>
-      <div class="st" data-status="検討中">検討中</div>
-    </div>
-  </div>
-  <div class="fg">
     <label class="fl">📈 銘柄タイプ</label>
     <div class="st-row">
       <div class="st" data-type="ディフェンシブ">🛡 ディフェンシブ</div>
       <div class="st" data-type="景気敏感">📊 景気敏感</div>
     </div>
   </div>
+  <div class="fg"><label class="fl">🏭 業種（セクター）</label><select class="fi" id="iSector"><option value="">未設定</option><option>水産・農林業</option><option>鉱業</option><option>建設業</option><option>食料品</option><option>繊維製品</option><option>パルプ・紙</option><option>化学</option><option>医薬品</option><option>石油・石炭製品</option><option>ゴム製品</option><option>ガラス・土石製品</option><option>鉄鋼</option><option>非鉄金属</option><option>金属製品</option><option>機械</option><option>電気機器</option><option>輸送用機器</option><option>精密機器</option><option>その他製品</option><option>電気・ガス業</option><option>陸運業</option><option>海運業</option><option>空運業</option><option>倉庫・運輸関連</option><option>情報・通信業</option><option>卸売業</option><option>小売業</option><option>銀行業</option><option>証券・商品先物</option><option>保険業</option><option>その他金融業</option><option>不動産業</option><option>サービス業</option></select></div>
+  <div class="fg">
+    <label class="fl">📋 ステータス</label>
+    <div class="st-row">
+      <div class="st" data-status="購入済み">購入済み</div>
+      <div class="st" data-status="検討中">検討中</div>
+    </div>
+  </div>
+  <div class="fg"><label class="fl">📝 メモ</label><textarea class="fi" id="iMemo" placeholder="気になる点・購入理由など" rows="3" style="resize:none;line-height:1.5"></textarea></div>
   <button class="save-btn" id="saveBtn">✓ 追加する</button>
 </div>
 
@@ -590,21 +589,25 @@ document.getElementById('saveBtn').onclick = function() {
     document.getElementById('detTitle').textContent = s.name;
     renderHist(s);
   } else {
+    var pp = parseFloat(document.getElementById('iPurchasePrice').value) || 0;
+    var ps = parseInt(document.getElementById('iShares').value) || 0;
+    var pd = document.getElementById('iPurchaseDate').value || '';
+    var initHistory = (pp && ps && pd) ? [{date:pd, price:pp, shares:ps}] : [];
     stocks.push({
       id: Date.now().toString(), name: name,
       code: document.getElementById('iCode').value || '',
       price: 0,
       yield: parseFloat(document.getElementById('iYield').value) || 0,
-      purchasePrice: parseFloat(document.getElementById('iPurchasePrice').value) || 0,
-      shares: parseInt(document.getElementById('iShares').value) || 0,
-      purchaseDate: document.getElementById('iPurchaseDate').value || '',
+      purchasePrice: pp,
+      shares: ps,
+      purchaseDate: pd,
       memo: document.getElementById('iMemo').value.trim(),
       divMonths: getSelMonths(),
       cycle: ce ? ce.dataset.cycle : '',
       status: se ? se.dataset.status : '検討中',
       type: te ? te.dataset.type : '',
       sector: document.getElementById('iSector').value || '',
-      history: []
+      history: initHistory
     });
   }
   sv(); closeAdd(); renderAll();
@@ -634,7 +637,9 @@ document.getElementById('editBtn').onclick = function() {
   document.querySelectorAll('.st[data-type]').forEach(function(e){ e.classList.toggle('sel', e.dataset.type === s.type); });
   document.getElementById('saveBtn').textContent = '✓ 保存する';
   document.getElementById('addOverlay').className = 'overlay show';
-  document.getElementById('addSheet').style.display = 'block';
+  var sheet = document.getElementById('addSheet');
+  sheet.style.display = 'block';
+  sheet.scrollTop = 0;
 };
 document.getElementById('delBtn').onclick = function() {
   if (!confirm('削除しますか？')) return;
@@ -868,28 +873,46 @@ function switchChart(n) {
 
 function drawDonut(boxId, valId, legendId, cm, tv) {
   var entries = Object.entries(cm);
-  var typeColors = {'ディフェンシブ':'#AD1457','景気敏感':'#2E7D32','未分類':'#9B9B9B'};
-  var gradParts = [], cumAngle = 0;
+  var typeColors = {'ディフェンシブ':'#AD1457','景気敏感':'#2E7D32','未分類':'#9B9B9B','未設定':'#BDBDBD'};
+  var gradParts = [], cumAngle = 0, labelData = [];
   entries.forEach(function(e, i) {
     var col = typeColors[e[0]] || CC[e[0]] || COLS[i % COLS.length];
     var pct = e[1] / tv * 100;
     gradParts.push(col + ' ' + cumAngle.toFixed(1) + '% ' + (cumAngle + pct).toFixed(1) + '%');
+    labelData.push({ name: e[0], pct: pct, midAngle: cumAngle + pct / 2, col: col });
     cumAngle += pct;
   });
   var box = document.getElementById(boxId);
   box.style.background = 'conic-gradient(' + gradParts.join(', ') + ')';
   box.style.position = 'relative';
+  // 中央の穴
   var hole = box.querySelector('.donut-hole');
   if (!hole) {
     hole = document.createElement('div');
     hole.className = 'donut-hole';
-    hole.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;border-radius:50%;background:#fff;z-index:1;';
+    hole.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:58px;height:58px;border-radius:50%;background:#fff;z-index:1;';
     box.appendChild(hole);
   }
-  document.getElementById(valId).textContent = '¥' + tv.toLocaleString();
+  // ラベルをリセット
+  box.querySelectorAll('.donut-lbl').forEach(function(l){ l.remove(); });
+  // スライスラベル（5%以上のみ表示）
+  labelData.forEach(function(d) {
+    if (d.pct < 5) return;
+    var rad = (d.midAngle / 100) * 2 * Math.PI - Math.PI / 2;
+    var r = 36; // ドーナツ中心からの距離(%)
+    var x = 50 + r * Math.cos(rad);
+    var y = 50 + r * Math.sin(rad);
+    var lbl = document.createElement('div');
+    lbl.className = 'donut-lbl';
+    lbl.textContent = Math.round(d.pct) + '%';
+    lbl.style.cssText = 'position:absolute;left:'+x+'%;top:'+y+'%;transform:translate(-50%,-50%);font-size:9px;font-weight:900;color:#fff;z-index:3;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,0.5);white-space:nowrap;';
+    box.appendChild(lbl);
+  });
+  document.getElementById(valId) && (document.getElementById(valId).textContent = '¥' + tv.toLocaleString());
   document.getElementById(legendId).innerHTML = entries.map(function(e, i) {
     var col = typeColors[e[0]] || CC[e[0]] || COLS[i % COLS.length];
-    return '<div class="li"><div class="ld" style="background:' + col + '"></div><span class="ln">' + e[0] + '</span><span class="lp">' + Math.round(e[1] / tv * 100) + '%</span></div>';
+    var pct = Math.round(e[1] / tv * 100);
+    return '<div class="li"><div class="ld" style="background:' + col + '"></div><span class="ln">' + e[0] + '</span><span class="lp">' + pct + '%</span></div>';
   }).join('');
 }
 
