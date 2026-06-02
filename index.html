@@ -84,7 +84,13 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 .edit-btn { background:rgba(255,255,255,0.25); border:none; color:#fff; font-size:13px; font-weight:700; padding:8px 14px; border-radius:20px; cursor:pointer; }
 .detail-body { padding:20px; }
 .chart-card { background:#fff; border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-.search-wrap { position:relative; margin-bottom:12px; }
+.search-wrap { position:relative; margin-bottom:8px; }
+.sort-wrap { display:flex; align-items:center; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.sort-wrap::-webkit-scrollbar { display:none; }
+.sort-label { font-size:11px; font-weight:700; color:#6B5C3E; white-space:nowrap; flex-shrink:0; }
+.sort-chips { display:flex; gap:6px; flex-shrink:0; }
+.sort-chip { padding:6px 12px; border-radius:99px; border:1.5px solid #E8DFC8; background:#fff; color:#6B5C3E; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; -webkit-appearance:none; transition:all 0.15s; }
+.sort-chip.active { background:linear-gradient(135deg,#C9A84C,#F0D080); border-color:#C9A84C; color:#fff; }
 .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:15px; pointer-events:none; }
 .search-input { width:100%; padding:12px 14px 12px 40px; border:2px solid #E8DFC8; border-radius:12px; font-size:14px; font-family:sans-serif; background:#fff; outline:none; color:#1A1208; -webkit-appearance:none; }
 .search-input:focus { border-color:#C9A84C; }
@@ -191,6 +197,16 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input class="search-input" id="searchInput" type="search" placeholder="銘柄名・コード・業種で検索..." oninput="renderStocks()">
+      </div>
+      <div class="sort-wrap">
+        <span class="sort-label">並び替え：</span>
+        <div class="sort-chips" id="sortChips">
+          <button class="sort-chip active" data-sort="default">登録順</button>
+          <button class="sort-chip" data-sort="name">銘柄名</button>
+          <button class="sort-chip" data-sort="yield">利回り↓</button>
+          <button class="sort-chip" data-sort="status">ステータス</button>
+          <button class="sort-chip" data-sort="cycle">サイクル</button>
+        </div>
       </div>
       <div id="stockList"></div>
       <div class="empty" id="emptyStocks"><div class="empty-icon">🐑</div><div>右上の「＋ 追加」から<br>銘柄を登録しましょう！</div></div>
@@ -700,6 +716,32 @@ function renderStats() {
   document.getElementById('sAnnual').textContent = '¥' + Math.round(a).toLocaleString();
 }
 
+var currentSort = 'default';
+var cycleOrder = {'金融相場':0,'業績相場':1,'逆金融相場':2,'逆業績相場':3};
+
+document.getElementById('sortChips').addEventListener('click', function(e) {
+  var chip = e.target.closest('.sort-chip');
+  if (!chip) return;
+  currentSort = chip.dataset.sort;
+  document.querySelectorAll('.sort-chip').forEach(function(c){ c.classList.remove('active'); });
+  chip.classList.add('active');
+  renderStocks();
+});
+
+function sortStocks(arr) {
+  var copy = arr.slice();
+  if (currentSort === 'name') {
+    copy.sort(function(a,b){ return (a.name||'').localeCompare(b.name||'','ja'); });
+  } else if (currentSort === 'yield') {
+    copy.sort(function(a,b){ return (b.yield||0) - (a.yield||0); });
+  } else if (currentSort === 'status') {
+    copy.sort(function(a,b){ return (a.status==='購入済み'?0:1) - (b.status==='購入済み'?0:1); });
+  } else if (currentSort === 'cycle') {
+    copy.sort(function(a,b){ return (cycleOrder[a.cycle]??9) - (cycleOrder[b.cycle]??9); });
+  }
+  return copy;
+}
+
 function renderStocks() {
   var list = document.getElementById('stockList');
   var empty = document.getElementById('emptyStocks');
@@ -714,6 +756,7 @@ function renderStocks() {
            (s.cycle||'').toLowerCase().includes(q) ||
            (s.type||'').toLowerCase().includes(q);
   }) : stocks;
+  filtered = sortStocks(filtered);
   if (!filtered.length) { list.innerHTML = ''; emptySearch.style.display = 'block'; return; }
   emptySearch.style.display = 'none';
   list.innerHTML = filtered.map(function(s) {
