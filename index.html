@@ -241,6 +241,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
     <div class="detail-row"><span class="dl">銘柄コード</span><span class="dv" id="detCode"></span></div>
     <div class="detail-row"><span class="dl">配当利回り</span><span class="dv" id="detYield"></span></div>
     <div class="detail-row"><span class="dl">購入株価</span><span class="dv" id="detPurchasePrice"></span></div>
+    <div class="detail-row"><span class="dl">購入株数</span><span class="dv" id="detShares"></span></div>
     <div class="detail-row"><span class="dl">平均取得比</span><span class="dv" id="detChange"></span></div>
     <div class="detail-row" style="border:none"><span class="dl">ステータス</span><span class="dv" id="detStatus"></span></div>
     <div id="detMemoWrap" style="display:none;background:#FFFAED;border-radius:12px;padding:14px;margin:14px 0;font-size:14px;color:#4A3800;line-height:1.6;white-space:pre-wrap;word-break:break-all" id="detMemo"></div>
@@ -266,7 +267,10 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
   <div id="autoClassifyNote" style="font-size:11px;color:#C9A84C;margin:-8px 0 12px;display:none">✨ 自動分類しました！</div>
 
   <div class="fg"><label class="fl">📊 配当利回り（%）</label><input class="fi" id="iYield" placeholder="例：3.2" type="number" step="0.1"></div>
-  <div class="fg"><label class="fl">💴 購入株価（円）</label><input class="fi" id="iPurchasePrice" placeholder="例：2300" type="number"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="fg"><label class="fl">💴 購入株価（円）</label><input class="fi" id="iPurchasePrice" placeholder="例：2300" type="number"></div>
+    <div class="fg"><label class="fl">📊 購入株数（株）</label><input class="fi" id="iShares" placeholder="例：100" type="number"></div>
+  </div>
   <div class="fg">
     <label class="fl">📅 配当月（複数選択可）</label>
     <div class="month-grid" id="monthGrid">
@@ -508,6 +512,7 @@ document.getElementById('addBtn').onclick = function() {
   document.getElementById('iCode').value = '';
   document.getElementById('iYield').value = '';
   document.getElementById('iPurchasePrice').value = '';
+  document.getElementById('iShares').value = '';
   document.getElementById('iMemo').value = '';
   setSelMonths([]);
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.remove('sel'); });
@@ -568,6 +573,7 @@ document.getElementById('saveBtn').onclick = function() {
     s.price = 0;
     s.yield = parseFloat(document.getElementById('iYield').value) || 0;
     s.purchasePrice = parseFloat(document.getElementById('iPurchasePrice').value) || 0;
+    s.shares = parseInt(document.getElementById('iShares').value) || 0;
     s.memo = document.getElementById('iMemo').value.trim();
     s.divMonths = getSelMonths();
     s.cycle = ce ? ce.dataset.cycle : '';
@@ -583,6 +589,7 @@ document.getElementById('saveBtn').onclick = function() {
       price: 0,
       yield: parseFloat(document.getElementById('iYield').value) || 0,
       purchasePrice: parseFloat(document.getElementById('iPurchasePrice').value) || 0,
+      shares: parseInt(document.getElementById('iShares').value) || 0,
       memo: document.getElementById('iMemo').value.trim(),
       divMonths: getSelMonths(),
       cycle: ce ? ce.dataset.cycle : '',
@@ -609,6 +616,7 @@ document.getElementById('editBtn').onclick = function() {
   document.getElementById('iCode').value = s.code || '';
   document.getElementById('iYield').value = s.yield || '';
   document.getElementById('iPurchasePrice').value = s.purchasePrice || '';
+  document.getElementById('iShares').value = s.shares || '';
   document.getElementById('iMemo').value = s.memo || '';
   document.getElementById('iSector').value = s.sector || '';
   setSelMonths(s.divMonths || []);
@@ -666,6 +674,7 @@ function openDetail(id) {
   document.getElementById('detCode').textContent = s.code || '未設定';
   document.getElementById('detYield').textContent = s.yield ? s.yield + '%' : '未設定';
   document.getElementById('detPurchasePrice').textContent = s.purchasePrice ? '¥' + s.purchasePrice.toLocaleString() : '未設定';
+  document.getElementById('detShares').textContent = s.shares ? s.shares.toLocaleString() + '株' : '未設定';
   var avg2 = s.history&&s.history.length ? s.history.reduce(function(a,h){return a+h.price*h.shares;},0)/s.history.reduce(function(a,h){return a+h.shares;},0) : null;
   var basePrice = avg2 || s.purchasePrice || null;
   if (s.purchasePrice && basePrice && basePrice !== s.purchasePrice) {
@@ -700,6 +709,7 @@ function renderAll() { renderStats(); renderStocks(); renderChart(); }
 function getInvest(s) {
   var fromHistory = (s.history||[]).reduce(function(a,h){ return a + h.price * h.shares; }, 0);
   if (fromHistory > 0) return fromHistory;
+  if (s.purchasePrice && s.shares) return s.purchasePrice * s.shares;
   return s.purchasePrice || 0;
 }
 
