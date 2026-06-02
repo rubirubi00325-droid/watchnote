@@ -145,6 +145,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
         <div class="chart-tabs">
           <div class="chart-tab active" id="ctab1" onclick="switchChart(1)">🥮 景気サイクル</div>
           <div class="chart-tab" id="ctab2" onclick="switchChart(2)">🛡 銘柄タイプ</div>
+          <div class="chart-tab" id="ctab3" onclick="switchChart(3)">🏭 セクター</div>
         </div>
         <div id="chart1">
           <div class="donut-wrap">
@@ -158,6 +159,13 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
             <div class="donut-box" id="donutBox2">
             </div>
             <div class="legend" id="donutLegend2"></div>
+          </div>
+        </div>
+        <div id="chart3" style="display:none">
+          <div class="donut-wrap">
+            <div class="donut-box" id="donutBox3">
+            </div>
+            <div class="legend" id="donutLegend3"></div>
           </div>
         </div>
       </div>
@@ -221,6 +229,7 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
       <div class="mb" data-m="10">10月</div><div class="mb" data-m="11">11月</div><div class="mb" data-m="12">12月</div>
     </div>
   </div>
+  <div class="fg"><label class="fl">🏭 業種（セクター）</label><select class="fi" id="iSector"><option value="">未設定</option><option>水産・農林業</option><option>鉱業</option><option>建設業</option><option>食料品</option><option>繊維製品</option><option>パルプ・紙</option><option>化学</option><option>医薬品</option><option>石油・石炭製品</option><option>ゴム製品</option><option>ガラス・土石製品</option><option>鉄鋼</option><option>非鉄金属</option><option>金属製品</option><option>機械</option><option>電気機器</option><option>輸送用機器</option><option>精密機器</option><option>その他製品</option><option>電気・ガス業</option><option>陸運業</option><option>海運業</option><option>空運業</option><option>倉庫・運輸関連</option><option>情報・通信業</option><option>卸売業</option><option>小売業</option><option>銀行業</option><option>証券・商品先物</option><option>保険業</option><option>その他金融業</option><option>不動産業</option><option>サービス業</option></select></div>
   <div class="fg"><label class="fl">📝 メモ</label><textarea class="fi" id="iMemo" placeholder="気になる点・購入理由など" rows="3" style="resize:none;line-height:1.5"></textarea></div>
   <div class="fg">
     <label class="fl">🥮 景気サイクル</label>
@@ -484,6 +493,7 @@ document.getElementById('saveBtn').onclick = function() {
     s.cycle = ce ? ce.dataset.cycle : '';
     s.status = se ? se.dataset.status : '検討中';
     s.type = te ? te.dataset.type : '';
+    s.sector = document.getElementById('iSector').value || '';
     document.getElementById('detTitle').textContent = s.name;
     renderHist(s);
   } else {
@@ -499,6 +509,7 @@ document.getElementById('saveBtn').onclick = function() {
       cycle: ce ? ce.dataset.cycle : '',
       status: se ? se.dataset.status : '検討中',
       type: te ? te.dataset.type : '',
+      sector: document.getElementById('iSector').value || '',
       history: []
     });
   }
@@ -521,6 +532,7 @@ document.getElementById('editBtn').onclick = function() {
   document.getElementById('iTarget').value = s.target || '';
   document.getElementById('iCurrentPrice').value = s.currentPrice || '';
   document.getElementById('iMemo').value = s.memo || '';
+  document.getElementById('iSector').value = s.sector || '';
   setSelMonths(s.divMonths || []);
   document.querySelectorAll('.cy').forEach(function(e){ e.classList.toggle('sel', e.dataset.cycle === s.cycle); });
   document.querySelectorAll('.st[data-status]').forEach(function(e){ e.classList.toggle('sel', e.dataset.status === s.status); });
@@ -647,8 +659,10 @@ function renderStocks() {
 function switchChart(n) {
   document.getElementById('ctab1').className = 'chart-tab' + (n===1?' active':'');
   document.getElementById('ctab2').className = 'chart-tab' + (n===2?' active':'');
+  document.getElementById('ctab3').className = 'chart-tab' + (n===3?' active':'');
   document.getElementById('chart1').style.display = n===1?'block':'none';
   document.getElementById('chart2').style.display = n===2?'block':'none';
+  document.getElementById('chart3').style.display = n===3?'block':'none';
 }
 
 function drawDonut(boxId, valId, legendId, cm, tv) {
@@ -681,7 +695,7 @@ function drawDonut(boxId, valId, legendId, cm, tv) {
 function renderChart() {
   var card = document.getElementById('chartCard');
   if (!stocks.length) { card.style.display = 'none'; return; }
-  var cm1 = {}, tv1 = 0, cm2 = {}, tv2 = 0;
+  var cm1 = {}, tv1 = 0, cm2 = {}, tv2 = 0, cm3 = {}, tv3 = 0;
   stocks.forEach(function(s) {
     var invest = (s.history||[]).reduce(function(a,h){return a+h.price*h.shares;},0);
     if (invest <= 0) return;
@@ -689,11 +703,14 @@ function renderChart() {
     cm1[k1] = (cm1[k1]||0) + invest; tv1 += invest;
     var k2 = s.type || '未分類';
     cm2[k2] = (cm2[k2]||0) + invest; tv2 += invest;
+    var k3 = s.sector || '未設定';
+    cm3[k3] = (cm3[k3]||0) + invest; tv3 += invest;
   });
-  if (!tv1 && !tv2) { card.style.display = 'none'; return; }
+  if (!tv1 && !tv2 && !tv3) { card.style.display = 'none'; return; }
   card.style.display = 'block';
   if (tv1 > 0) drawDonut('donutBox1', 'donutVal1', 'donutLegend1', cm1, tv1);
   if (tv2 > 0) drawDonut('donutBox2', 'donutVal2', 'donutLegend2', cm2, tv2);
+  if (tv3 > 0) drawDonut('donutBox3', 'donutVal3', 'donutLegend3', cm3, tv3);
 }
 
 function renderDiv() {
