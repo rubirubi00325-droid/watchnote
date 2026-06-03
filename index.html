@@ -845,22 +845,23 @@ function setMonths(arr){
 function openHistForm(idx){
   editHistIdx=idx;
   var s=stocks.find(function(x){ return x.id===curId; });
-  if(idx>=0 && s && s.history[idx]){
+  var isEditing=idx>=0 && s && s.history[idx];
+  document.getElementById('histTitle').textContent = isEditing ? '✏️ 購入履歴を編集' : '＋ 購入履歴を追加';
+  document.getElementById('histSaveBtn').textContent = isEditing ? '✓ 保存する' : '✓ 追加する';
+  if(isEditing){
     var h=s.history[idx];
-    document.getElementById('histTitle').textContent='購入履歴を編集';
-    document.getElementById('histSaveBtn').textContent='✓ 保存する';
-    document.getElementById('hDate').value=h.date||'';
-    document.getElementById('hPrice').value=h.price||'';
-    document.getElementById('hShares').value=h.shares||'';
+    document.getElementById('hDate').value  = h.date   != null ? String(h.date)   : '';
+    document.getElementById('hPrice').value = h.price  != null ? String(h.price)  : '';
+    document.getElementById('hShares').value= h.shares != null ? String(h.shares) : '';
   } else {
-    document.getElementById('histTitle').textContent='購入履歴を追加';
-    document.getElementById('histSaveBtn').textContent='✓ 追加する';
-    document.getElementById('hDate').value=today();
-    document.getElementById('hPrice').value='';
-    document.getElementById('hShares').value='';
+    document.getElementById('hDate').value  = today();
+    document.getElementById('hPrice').value = '';
+    document.getElementById('hShares').value= '';
   }
+  var sheet=document.getElementById('histSheet');
+  sheet.scrollTop=0;
   document.getElementById('histOverlay').classList.add('show');
-  document.getElementById('histSheet').classList.add('show');
+  sheet.classList.add('show');
 }
 function closeHistForm(){
   document.getElementById('histOverlay').classList.remove('show');
