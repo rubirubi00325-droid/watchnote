@@ -1038,69 +1038,109 @@ function readCSVFile(file){
 })();
 
 function decodeCSVBuffer(buffer){
-  // UTF-8を試し、失敗したらShift-JISにフォールバック
-  try {
-    return new TextDecoder('utf-8', {fatal:true}).decode(buffer);
-  } catch(e){}
-  try {
-    return new TextDecoder('shift-jis').decode(buffer);
-  } catch(e){}
+  var bytes = new Uint8Array(buffer);
+  // UTF-8 BOM (EF BB BF) → UTF-8として読む
+  if(bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF){
+    return new TextDecoder('utf-8').decode(buffer).replace(/^﻿/,'');
+  }
+  // UTF-8 strict
+  try { return new TextDecoder('utf-8',{fatal:true}).decode(buffer); } catch(e){}
+  // Shift-JIS（複数のエイリアスを試す）
+  var sjis = ['shift-jis','shift_jis','sjis','x-sjis','windows-31j','cp932'];
+  for(var i=0;i<sjis.length;i++){
+    try { return new TextDecoder(sjis[i]).decode(buffer); } catch(e){}
+  }
   return new TextDecoder('utf-8').decode(buffer);
 }
 
-function parseCSVLine(line){
+function detectDelimiter(line){
+  // タブとカンマの数を比較して多い方を採用
+  var tabs   = (line.match(/\t/g)||[]).length;
+  var commas = (line.match(/,/g)||[]).length;
+  return tabs >= commas ? '\t' : ',';
+}
+
+function parseCSVLine(line, delim){
+  delim = delim || ',';
   var result = [], field = '', inQ = false;
-  for(var i = 0; i < line.length; i++){
+  for(var i=0; i<line.length; i++){
     var c = line[i];
-    if(c === '"'){ inQ = !inQ; }
-    else if(c === ',' && !inQ){ result.push(field.trim()); field = ''; }
-    else { field += c; }
+    if(c==='"'){ inQ=!inQ; }
+    else if(c===delim && !inQ){ result.push(field.trim()); field=''; }
+    else { field+=c; }
   }
   result.push(field.trim());
   return result;
 }
 
-function toISODate(dateStr){
-  // "YYYY/MM/DD" → "YYYY-MM-DD"、"YYYY年MM月DD日" → "YYYY-MM-DD"
-  if(!dateStr) return '';
-  var d = dateStr.replace(/年|月/g,'-').replace(/日/g,'').replace(/\//g,'-');
-  return d.length >= 8 ? d : '';
+function toNum(s){
+  // 全角数字・カンマ・スペースを除去して数値化
+  return s.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);})
+          .replace(/[,\s　]/g,'');
+}
+
+function toISODate(s){
+  if(!s) return '';
+  // 全角→半角
+  s = s.replace(/[０-９／年月日]/g,function(c){
+    if(c==='年'||c==='月') return '-';
+    if(c==='日') return '';
+    return String.fromCharCode(c.charCodeAt(0)-0xFEE0);
+  });
+  var d = s.replace(/\//g,'-').replace(/年|月/g,'-').replace(/日/g,'').trim();
+  // YYYY-M-D → YYYY-MM-DD
+  var m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  return d.length>=8 ? d : '';
 }
 
 function processRakutenCSV(text){
+  // BOM除去
+  text = text.replace(/^﻿/,'');
   var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
-  // ヘッダー行をスキップ（「約定日」で始まるか最初の数値っぽい行まで）
+  if(!lines.length){ alert('❌ データが空です'); return; }
+
+  // 区切り文字を自動検出（最初の10行から判定）
+  var sampleLines = lines.slice(0,10).join('\n');
+  var delim = detectDelimiter(sampleLines);
+
+  // データ行を抽出（約定日列が4桁年で始まる行）
   var dataLines = lines.filter(function(l){
-    var cols = parseCSVLine(l);
-    // 約定日列が日付形式（YYYY/MM/DD または YYYY年MM月DD日）かチェック
-    return cols.length >= 10 && /^\d{4}[\/年]/.test(cols[0].trim());
+    var cols = parseCSVLine(l, delim);
+    if(cols.length < 8) return false;
+    var d = cols[0].trim().replace(/^﻿/,''); // BOM除去
+    return /^\d{4}[\/\-年]/.test(d);
   });
 
   if(!dataLines.length){
-    alert('❌ 有効なデータが見つかりませんでした。\n楽天証券の取引履歴CSVか確認してください。');
+    var preview = lines.slice(0,3).join('\n');
+    alert('❌ 有効なデータが見つかりませんでした。\n\n先頭の内容：\n'+preview+'\n\n※楽天証券の取引履歴CSVをご確認ください');
     return;
   }
 
   csvQueue = [];
   csvNewCount = 0; csvAddCount = 0; csvSkipCount = 0;
-  var newItems = []; // 確認不要な新規追加
+  var newItems = [];
 
   dataLines.forEach(function(line){
-    var cols = parseCSVLine(line);
+    var cols = parseCSVLine(line, delim);
     // 列: 0=約定日 1=受渡日 2=銘柄コード 3=銘柄名 4=市場 5=口座 6=取引区分 7=売買 8=数量 9=単価
     var baibai = (cols[7]||'').trim();
-    if(baibai !== '買' && baibai !== '買付' && baibai !== '買い') return; // 売は無視
+    // 「買」を含む場合のみ対象（売・信用売などを除外）
+    if(!baibai.includes('買')) return;
 
-    var date   = toISODate((cols[0]||'').trim());
+    var date   = toISODate((cols[0]||'').replace(/^﻿/,'').trim());
     var code   = (cols[2]||'').trim().replace(/[^0-9]/g,'');
     var name   = (cols[3]||'').trim();
-    var shares = parseInt((cols[8]||'0').replace(/,/g,'')) || 0;
-    var price  = parseFloat((cols[9]||'0').replace(/,/g,'')) || 0;
+    var shares = parseInt(toNum(cols[8]||'0')) || 0;
+    var price  = parseFloat(toNum(cols[9]||'0')) || 0;
 
     if(!name || !shares || !price) return;
 
     var entry = { id:uid(), date:date, price:price, shares:shares };
-    var existing = stocks.find(function(s){ return s.code === code || s.name === name; });
+    var existing = stocks.find(function(s){
+      return (code && s.code === code) || s.name === name;
+    });
 
     if(!existing){
       newItems.push({ code:code, name:name, date:date, price:price, shares:shares, entry:entry });
