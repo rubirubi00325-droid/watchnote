@@ -105,17 +105,19 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
 .btn-gold-fill:active { opacity:0.85; }
 .btn-gold-outline { display:block; width:100%; padding:15px; border-radius:12px; border:2px solid #C9A84C; background:#fff; color:#8B6914; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:0.3px; }
 .btn-gold-outline:active { background:#FFFAED; }
-.chart-swipe-wrap { overflow:hidden; width:100%; }
-.chart-swipe-track { display:flex; transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); will-change:transform; }
-.chart-slide { min-width:100%; flex-shrink:0; }
-.chart-nav { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:12px; }
-.chart-dots { display:flex; align-items:center; gap:6px; }
-.chart-dot { width:7px; height:7px; border-radius:50%; background:#E8DFC8; transition:all 0.2s; cursor:pointer; }
-.chart-dot.active { background:linear-gradient(135deg,#C9A84C,#F0D080); width:18px; border-radius:4px; }
-.chart-arrow { width:30px; height:30px; border-radius:50%; border:1.5px solid #E8DFC8; background:#fff; color:#8B6914; font-size:20px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; -webkit-appearance:none; }
-.chart-arrow:active { background:#FFF3CD; border-color:#C9A84C; }
-.chart-arrow:disabled { opacity:0.3; cursor:default; }
-.chart-label { text-align:center; font-size:12px; font-weight:700; color:#8B6914; margin-bottom:12px; }
+.chart-btn-group { display:flex; gap:6px; margin-bottom:14px; }
+.chart-btn { flex:1; padding:8px 2px; border-radius:10px; border:1.5px solid #E8DFC8; background:#FAF8F2; color:#6B5C3E; font-size:11px; font-weight:700; cursor:pointer; -webkit-appearance:none; transition:all 0.15s; line-height:1.4; }
+.chart-btn.active { background:linear-gradient(135deg,#8B6914,#C9A84C); border-color:#C9A84C; color:#fff; }
+.chart-svg-wrap { width:100%; max-width:300px; margin:0 auto 16px; }
+.chart-svg-wrap svg { width:100%; height:auto; display:block; }
+.chart-legend-list { display:flex; flex-direction:column; gap:6px; }
+.cli { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:#FAF8F2; border-radius:10px; }
+.cli-left { display:flex; align-items:center; gap:10px; min-width:0; }
+.cli-dot { width:13px; height:13px; border-radius:4px; flex-shrink:0; }
+.cli-name { font-size:13px; color:#1A1208; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cli-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.cli-pct { font-size:15px; font-weight:900; color:#8B6914; }
+.cli-amt { font-size:11px; color:#6B5C3E; }
 .donut-wrap { display:flex; align-items:center; gap:20px; }
 .donut-box { position:relative; width:110px; height:110px; flex-shrink:0; border-radius:50%; }
 .donut-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; z-index:2; }
@@ -172,38 +174,15 @@ body { font-family: sans-serif; background:#FAF8F2; color:#1A1208; max-width:430
   <div class="content">
     <div id="stocksTab">
       <div class="chart-card" id="chartCard" style="display:none">
-        <div id="chartLabel" class="chart-label">🥮 景気サイクル</div>
-        <div class="chart-swipe-wrap" id="chartSwipeWrap">
-          <div class="chart-swipe-track" id="chartTrack">
-            <div class="chart-slide">
-              <div class="donut-wrap">
-                <div class="donut-box" id="donutBox1"></div>
-                <div class="legend" id="donutLegend1"></div>
-              </div>
-            </div>
-            <div class="chart-slide">
-              <div class="donut-wrap">
-                <div class="donut-box" id="donutBox2"></div>
-                <div class="legend" id="donutLegend2"></div>
-              </div>
-            </div>
-            <div class="chart-slide">
-              <div class="donut-wrap">
-                <div class="donut-box" id="donutBox3"></div>
-                <div class="legend" id="donutLegend3"></div>
-              </div>
-            </div>
-          </div>
+        <div class="chart-btn-group">
+          <button class="chart-btn active" id="cbtn0" onclick="switchChart(0)">🥮 景気サイクル</button>
+          <button class="chart-btn" id="cbtn1" onclick="switchChart(1)">🛡 銘柄タイプ</button>
+          <button class="chart-btn" id="cbtn2" onclick="switchChart(2)">🏭 セクター</button>
         </div>
-        <div class="chart-nav">
-          <button class="chart-arrow" id="chartPrev" onclick="switchChart(chartIndex-1)">‹</button>
-          <div class="chart-dots">
-            <div class="chart-dot active" id="dot1" onclick="switchChart(0)"></div>
-            <div class="chart-dot" id="dot2" onclick="switchChart(1)"></div>
-            <div class="chart-dot" id="dot3" onclick="switchChart(2)"></div>
-          </div>
-          <button class="chart-arrow" id="chartNext" onclick="switchChart(chartIndex+1)">›</button>
+        <div class="chart-svg-wrap">
+          <svg id="chartSvg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
         </div>
+        <div class="chart-legend-list" id="chartLegend"></div>
       </div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
@@ -845,107 +824,131 @@ function renderStocks() {
 }
 
 var chartIndex = 0;
-var chartLabels = ['🥮 景気サイクル','🛡 銘柄タイプ','🏭 セクター'];
+var chartData = [null, null, null]; // キャッシュ
+
+var TYPE_COLORS = {
+  'ディフェンシブ':'#AD1457','景気敏感':'#2E7D32',
+  '未分類':'#9B9B9B','未設定':'#BDBDBD'
+};
+var CYCLE_COLORS = {
+  '金融相場':'#4A90D9','業績相場':'#C9A84C',
+  '逆金融相場':'#5CB85C','逆業績相場':'#E8564A'
+};
+var EXTRA_COLS = ['#9B59B6','#E67E22','#1ABC9C','#E74C3C','#3498DB','#F39C12','#2ECC71'];
+
+function getColor(name, idx) {
+  return TYPE_COLORS[name] || CYCLE_COLORS[name] || EXTRA_COLS[idx % EXTRA_COLS.length];
+}
+
+function polarXY(cx, cy, r, deg) {
+  var rad = (deg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function svgArcPath(cx, cy, R, r, startDeg, endDeg) {
+  var s1 = polarXY(cx, cy, R, startDeg), e1 = polarXY(cx, cy, R, endDeg);
+  var s2 = polarXY(cx, cy, r, endDeg),   e2 = polarXY(cx, cy, r, startDeg);
+  var large = endDeg - startDeg > 180 ? 1 : 0;
+  return ['M', s1.x, s1.y,
+          'A', R, R, 0, large, 1, e1.x, e1.y,
+          'L', s2.x, s2.y,
+          'A', r, r, 0, large, 0, e2.x, e2.y, 'Z'].join(' ');
+}
+
+function drawSVGDonut(cm, tv) {
+  var svg = document.getElementById('chartSvg');
+  var legend = document.getElementById('chartLegend');
+  svg.innerHTML = '';
+  legend.innerHTML = '';
+  if (!tv) return;
+
+  var entries = Object.entries(cm).sort(function(a,b){ return b[1]-a[1]; });
+  var cx = 140, cy = 140, R = 120, r = 72;
+  var cur = 0;
+
+  entries.forEach(function(e, i) {
+    var col = getColor(e[0], i);
+    var pct = e[1] / tv * 100;
+    var sweep = pct / 100 * 360;
+    var end = cur + sweep;
+
+    // スライス
+    var path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', svgArcPath(cx, cy, R, r, cur, end));
+    path.setAttribute('fill', col);
+    path.setAttribute('stroke', '#fff');
+    path.setAttribute('stroke-width', '2');
+    svg.appendChild(path);
+
+    // ラベル（8%以上）
+    if (pct >= 8) {
+      var mid = cur + sweep / 2;
+      var lp = polarXY(cx, cy, (R + r) / 2, mid);
+      var txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', lp.x);
+      txt.setAttribute('y', lp.y);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('dominant-baseline','middle');
+      txt.setAttribute('fill','#fff');
+      txt.setAttribute('font-size', pct >= 15 ? '13' : '11');
+      txt.setAttribute('font-weight','700');
+      txt.setAttribute('font-family','sans-serif');
+      txt.textContent = Math.round(pct) + '%';
+      svg.appendChild(txt);
+    }
+    cur = end;
+
+    // 凡例
+    legend.innerHTML += '<div class="cli">' +
+      '<div class="cli-left"><div class="cli-dot" style="background:'+col+'"></div><span class="cli-name">'+e[0]+'</span></div>' +
+      '<div class="cli-right"><span class="cli-pct">'+Math.round(pct)+'%</span><span class="cli-amt">¥'+Math.round(e[1]).toLocaleString()+'</span></div>' +
+    '</div>';
+  });
+
+  // 中央テキスト
+  var totalTxt = document.createElementNS('http://www.w3.org/2000/svg','text');
+  totalTxt.setAttribute('x', cx); totalTxt.setAttribute('y', cy - 8);
+  totalTxt.setAttribute('text-anchor','middle'); totalTxt.setAttribute('font-size','11');
+  totalTxt.setAttribute('fill','#6B5C3E'); totalTxt.setAttribute('font-family','sans-serif');
+  totalTxt.textContent = '合計';
+  svg.appendChild(totalTxt);
+
+  var amtTxt = document.createElementNS('http://www.w3.org/2000/svg','text');
+  amtTxt.setAttribute('x', cx); amtTxt.setAttribute('y', cy + 12);
+  amtTxt.setAttribute('text-anchor','middle'); amtTxt.setAttribute('font-size','13');
+  amtTxt.setAttribute('font-weight','700'); amtTxt.setAttribute('fill','#8B6914');
+  amtTxt.setAttribute('font-family','sans-serif');
+  amtTxt.textContent = '¥' + Math.round(tv).toLocaleString();
+  svg.appendChild(amtTxt);
+}
 
 function switchChart(n) {
   if (n < 0 || n > 2) return;
   chartIndex = n;
-  document.getElementById('chartTrack').style.transform = 'translateX(-' + (n * 100) + '%)';
-  document.getElementById('chartLabel').textContent = chartLabels[n];
-  [0,1,2].forEach(function(i) {
-    document.getElementById('dot'+(i+1)).className = 'chart-dot' + (i===n?' active':'');
+  [0,1,2].forEach(function(i){
+    document.getElementById('cbtn'+i).className = 'chart-btn' + (i===n?' active':'');
   });
-  document.getElementById('chartPrev').disabled = n === 0;
-  document.getElementById('chartNext').disabled = n === 2;
-}
-
-// スワイプ処理
-(function() {
-  var wrap = document.getElementById('chartSwipeWrap');
-  var startX = 0, isDragging = false;
-  function onStart(e) {
-    startX = (e.touches ? e.touches[0].clientX : e.clientX);
-    isDragging = true;
-  }
-  function onEnd(e) {
-    if (!isDragging) return;
-    isDragging = false;
-    var endX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
-    var diff = startX - endX;
-    if (Math.abs(diff) < 40) return;
-    if (diff > 0 && chartIndex < 2) switchChart(chartIndex + 1);
-    if (diff < 0 && chartIndex > 0) switchChart(chartIndex - 1);
-  }
-  wrap.addEventListener('touchstart', onStart, {passive:true});
-  wrap.addEventListener('touchend', onEnd);
-  wrap.addEventListener('mousedown', onStart);
-  wrap.addEventListener('mouseup', onEnd);
-})();
-
-function drawDonut(boxId, valId, legendId, cm, tv) {
-  var entries = Object.entries(cm);
-  var typeColors = {'ディフェンシブ':'#AD1457','景気敏感':'#2E7D32','未分類':'#9B9B9B','未設定':'#BDBDBD'};
-  var gradParts = [], cumAngle = 0, labelData = [];
-  entries.forEach(function(e, i) {
-    var col = typeColors[e[0]] || CC[e[0]] || COLS[i % COLS.length];
-    var pct = e[1] / tv * 100;
-    gradParts.push(col + ' ' + cumAngle.toFixed(1) + '% ' + (cumAngle + pct).toFixed(1) + '%');
-    labelData.push({ name: e[0], pct: pct, midAngle: cumAngle + pct / 2, col: col });
-    cumAngle += pct;
-  });
-  var box = document.getElementById(boxId);
-  box.style.background = 'conic-gradient(' + gradParts.join(', ') + ')';
-  box.style.position = 'relative';
-  // 中央の穴
-  var hole = box.querySelector('.donut-hole');
-  if (!hole) {
-    hole = document.createElement('div');
-    hole.className = 'donut-hole';
-    hole.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:58px;height:58px;border-radius:50%;background:#fff;z-index:1;';
-    box.appendChild(hole);
-  }
-  // ラベルをリセット
-  box.querySelectorAll('.donut-lbl').forEach(function(l){ l.remove(); });
-  // スライスラベル（5%以上のみ表示）
-  labelData.forEach(function(d) {
-    if (d.pct < 5) return;
-    var rad = (d.midAngle / 100) * 2 * Math.PI - Math.PI / 2;
-    var r = 36; // ドーナツ中心からの距離(%)
-    var x = 50 + r * Math.cos(rad);
-    var y = 50 + r * Math.sin(rad);
-    var lbl = document.createElement('div');
-    lbl.className = 'donut-lbl';
-    lbl.textContent = Math.round(d.pct) + '%';
-    lbl.style.cssText = 'position:absolute;left:'+x+'%;top:'+y+'%;transform:translate(-50%,-50%);font-size:9px;font-weight:900;color:#fff;z-index:3;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,0.5);white-space:nowrap;';
-    box.appendChild(lbl);
-  });
-  document.getElementById(valId) && (document.getElementById(valId).textContent = '¥' + tv.toLocaleString());
-  document.getElementById(legendId).innerHTML = entries.map(function(e, i) {
-    var col = typeColors[e[0]] || CC[e[0]] || COLS[i % COLS.length];
-    var pct = Math.round(e[1] / tv * 100);
-    return '<div class="li"><div class="ld" style="background:' + col + '"></div><span class="ln">' + e[0] + '</span><span class="lp">' + pct + '%</span></div>';
-  }).join('');
+  if (chartData[n]) drawSVGDonut(chartData[n].cm, chartData[n].tv);
 }
 
 function renderChart() {
   var card = document.getElementById('chartCard');
   if (!stocks.length) { card.style.display = 'none'; return; }
-  var cm1 = {}, tv1 = 0, cm2 = {}, tv2 = 0, cm3 = {}, tv3 = 0;
+  var cm = [{},{},{}], tv = [0,0,0];
   stocks.forEach(function(s) {
-    var invest = getInvest(s);
-    if (invest <= 0) return;
-    var k1 = s.cycle || '未分類';
-    cm1[k1] = (cm1[k1]||0) + invest; tv1 += invest;
-    var k2 = s.type || '未分類';
-    cm2[k2] = (cm2[k2]||0) + invest; tv2 += invest;
-    var k3 = s.sector || '未設定';
-    cm3[k3] = (cm3[k3]||0) + invest; tv3 += invest;
+    var inv = getInvest(s);
+    if (inv <= 0) return;
+    var k0 = s.cycle || '未分類';
+    cm[0][k0] = (cm[0][k0]||0) + inv; tv[0] += inv;
+    var k1 = s.type || '未分類';
+    cm[1][k1] = (cm[1][k1]||0) + inv; tv[1] += inv;
+    var k2 = s.sector || '未設定';
+    cm[2][k2] = (cm[2][k2]||0) + inv; tv[2] += inv;
   });
-  if (!tv1 && !tv2 && !tv3) { card.style.display = 'none'; return; }
+  if (!tv[0] && !tv[1] && !tv[2]) { card.style.display = 'none'; return; }
   card.style.display = 'block';
-  if (tv1 > 0) drawDonut('donutBox1', 'donutVal1', 'donutLegend1', cm1, tv1);
-  if (tv2 > 0) drawDonut('donutBox2', 'donutVal2', 'donutLegend2', cm2, tv2);
-  if (tv3 > 0) drawDonut('donutBox3', 'donutVal3', 'donutLegend3', cm3, tv3);
+  chartData = [{cm:cm[0],tv:tv[0]},{cm:cm[1],tv:tv[1]},{cm:cm[2],tv:tv[2]}];
+  drawSVGDonut(chartData[chartIndex].cm, chartData[chartIndex].tv);
 }
 
 function renderDiv() {
