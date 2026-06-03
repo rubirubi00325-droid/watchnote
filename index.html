@@ -1003,12 +1003,35 @@ function onRakutenCSV(e){
 }
 
 function readCSVFile(file){
-  var reader = new FileReader();
-  reader.onload = function(ev){
-    var text = decodeCSVBuffer(ev.target.result);
-    processRakutenCSV(text);
+  // ① まずバイナリで読んでUTF-8判定
+  var r1 = new FileReader();
+  r1.onload = function(ev){
+    var buf = ev.target.result;
+    var bytes = new Uint8Array(buf);
+
+    // UTF-8 BOM付き
+    if(bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF){
+      var t = new TextDecoder('utf-8').decode(buf).replace(/^﻿/,'');
+      processRakutenCSV(t); return;
+    }
+    // 有効なUTF-8か確認
+    var isUTF8 = false;
+    try{ new TextDecoder('utf-8',{fatal:true}).decode(buf); isUTF8=true; }catch(e){}
+
+    if(isUTF8){
+      processRakutenCSV(new TextDecoder('utf-8').decode(buf));
+    } else {
+      // ② Shift-JIS → FileReader.readAsTextで読み直す（Safari含む全ブラウザ対応）
+      var r2 = new FileReader();
+      r2.onload = function(ev2){ processRakutenCSV(ev2.target.result); };
+      r2.onerror = function(){
+        // 最終フォールバック
+        processRakutenCSV(new TextDecoder('utf-8').decode(buf));
+      };
+      r2.readAsText(file, 'Shift_JIS');
+    }
   };
-  reader.readAsArrayBuffer(file);
+  r1.readAsArrayBuffer(file);
 }
 
 // ── ドラッグ＆ドロップ ──
