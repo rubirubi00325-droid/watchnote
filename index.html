@@ -1048,14 +1048,11 @@ function readCSVFile(file){
 
 function decodeCSVBuffer(buffer){
   var bytes = new Uint8Array(buffer);
-  // UTF-8 BOM (EF BB BF) → UTF-8として読む
   if(bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF){
     return new TextDecoder('utf-8').decode(buffer).replace(/^﻿/,'');
   }
-  // UTF-8 strict
   try { return new TextDecoder('utf-8',{fatal:true}).decode(buffer); } catch(e){}
-  // Shift-JIS（複数のエイリアスを試す）
-  var sjis = ['shift-jis','shift_jis','sjis','x-sjis','windows-31j','cp932'];
+  var sjis = ['shift_jis','windows-31j','shift-jis','sjis','x-sjis'];
   for(var i=0;i<sjis.length;i++){
     try { return new TextDecoder(sjis[i]).decode(buffer); } catch(e){}
   }
@@ -1082,130 +1079,128 @@ function parseCSVLine(line, delim){
 }
 
 function toNum(s){
-  // 全角数字・カンマ・スペースを除去して数値化
-  return s.replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);})
-          .replace(/[,\s　]/g,'');
+  if(s==null) return '0';
+  return String(s)
+    .replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);})
+    .replace(/[,\s　]/g,'');
 }
 
 function toISODate(s){
   if(!s) return '';
-  // 全角→半角
-  s = s.replace(/[０-９／年月日]/g,function(c){
-    if(c==='年'||c==='月') return '-';
-    if(c==='日') return '';
-    return String.fromCharCode(c.charCodeAt(0)-0xFEE0);
-  });
-  var d = s.replace(/\//g,'-').replace(/年|月/g,'-').replace(/日/g,'').trim();
-  // YYYY-M-D → YYYY-MM-DD
-  var m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  s = String(s)
+    .replace(/[０-９／]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);})
+    .replace(/[年月]/g,'-').replace(/日/g,'').replace(/\//g,'-').trim();
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if(m) return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
-  return d.length>=8 ? d : '';
+  return '';
 }
 
-// ヘッダー行から各列のインデックスを自動検出
 function detectColumns(headerCols){
   var idx = { date:-1, code:-1, name:-1, baibai:-1, shares:-1, price:-1 };
   headerCols.forEach(function(col, i){
-    // ブラケット類を除去して正規化
-    var c = col.replace(/[[\]［］（）()〔〕「」]/g,'').trim();
-    if     (c==='約定日'                      ) idx.date   = i;
-    else if(c==='銘柄コード'                  ) idx.code   = i;
-    else if(c==='銘柄名'                      ) idx.name   = i;
-    // 売買：最初の一致のみ（売買区分）
-    else if(c.includes('売買') && idx.baibai<0) idx.baibai = i;
-    // 数量：startsWith で「建数量」などを除外、最初の一致のみ
-    else if(c.startsWith('数量') && idx.shares<0) idx.shares = i;
-    // 単価：startsWith で「建単価」（c='建単価円' は不一致）を除外、最初の一致のみ
-    else if(c.startsWith('単価') && idx.price<0)  idx.price  = i;
+    var c = col.replace(/[[\]［］（）()〔〕「」""【】]/g,'').trim();
+    if(c==='約定日'                                           ) idx.date   = i;
+    else if((c==='銘柄コード'||c==='コード') && idx.code<0   ) idx.code   = i;
+    else if(c==='銘柄名'                     && idx.name<0   ) idx.name   = i;
+    // 売買区分を優先（より具体的）、次に売買
+    else if(c==='売買区分'                                    ) idx.baibai = i;
+    else if(c.includes('売買')               && idx.baibai<0 ) idx.baibai = i;
+    // 数量・単価：「建」を含む列（建数量・建単価）は除外。約定数量・約定単価も includes で対応
+    else if(c.includes('数量')&&!c.includes('建')&&idx.shares<0) idx.shares = i;
+    else if(c.includes('単価')&&!c.includes('建')&&idx.price <0) idx.price  = i;
   });
+  // 検出できなかった列を楽天証券標準レイアウトでフォールバック（列ごとに個別適用）
+  if(idx.date   < 0) idx.date   =  0;
+  if(idx.code   < 0) idx.code   =  2;
+  if(idx.name   < 0) idx.name   =  3;
+  if(idx.baibai < 0) idx.baibai =  7;
+  if(idx.shares < 0) idx.shares = 10;
+  if(idx.price  < 0) idx.price  = 11;
   return idx;
 }
 
 function processRakutenCSV(text){
-  text = text.replace(/^﻿/,'').replace(/^﻿/,'');
-  var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
-  if(!lines.length){ alert('❌ データが空です'); return; }
+  try {
+    text = text.replace(/^﻿/,'');
+    var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+    if(!lines.length){ alert('❌ データが空です'); return; }
 
-  // 区切り文字を自動検出（データ行が多い後半も含めて判定）
-  var delim = detectDelimiter(lines.join('\n'));
+    var delim = detectDelimiter(lines.join('\n'));
 
-  // ヘッダー行を自動検出（'約定日'が含まれる最初の行）
-  var headerLineIdx = 0;
-  for(var i=0; i<Math.min(lines.length,5); i++){
-    if(lines[i].indexOf('約定日') >= 0){ headerLineIdx = i; break; }
-  }
-  var headerCols = parseCSVLine(lines[headerLineIdx], delim);
-  var colIdx = detectColumns(headerCols);
-
-  // ヘッダーが正しく取得できなかった場合はデフォルト列番号
-  if(colIdx.date<0){
-    colIdx = { date:0, code:2, name:3, baibai:7, shares:10, price:11 };
-  }
-
-  // ヘッダー行の次からをデータ行として取得（約定日が4桁年で始まる行のみ）
-  var dataLines = lines.slice(headerLineIdx + 1).filter(function(l){
-    var cols = parseCSVLine(l, delim);
-    if(cols.length < 5) return false;
-    var d = cols[colIdx.date].trim().replace(/^﻿/,'');
-    return /^\d{4}[\/\-年]/.test(d);
-  });
-
-  if(!dataLines.length){
-    alert('❌ 有効なデータが見つかりませんでした。\n\n' +
-      '検出した列構成：\n' +
-      '  約定日:' + colIdx.date + ' 銘柄コード:' + colIdx.code +
-      ' 数量:' + colIdx.shares + ' 単価:' + colIdx.price + '\n\n' +
-      '楽天証券の取引履歴CSVをご確認ください');
-    return;
-  }
-
-  csvQueue = [];
-  csvNewCount = 0; csvAddCount = 0; csvSkipCount = 0;
-  var newItems = [];
-
-  dataLines.forEach(function(line){
-    var cols = parseCSVLine(line, delim);
-    var baibai = (cols[colIdx.baibai]||'').trim();
-    // 「買」を含む行のみ（売・信用売などを除外）
-    if(!baibai.includes('買')) return;
-
-    var date   = toISODate((cols[colIdx.date]||'').replace(/^﻿/,'').trim());
-    var code   = (cols[colIdx.code]||'').trim().replace(/[^0-9]/g,'');
-    var name   = (cols[colIdx.name]||'').trim();
-    var shares = parseInt(toNum(cols[colIdx.shares]||'0')) || 0;
-    var price  = parseFloat(toNum(cols[colIdx.price]||'0')) || 0;
-
-    if(!name || !shares || !price) return;
-
-    var entry = { id:uid(), date:date, price:price, shares:shares };
-    var existing = stocks.find(function(s){
-      return (code && s.code === code) || s.name === name;
-    });
-
-    if(!existing){
-      newItems.push({ code:code, name:name, date:date, price:price, shares:shares, entry:entry });
-    } else {
-      csvQueue.push({ existing:existing, entry:entry });
+    // ヘッダー行を自動検出（「約定日」を含む最初の行、最大5行目まで）
+    var hIdx = 0;
+    for(var i=0; i<Math.min(lines.length,5); i++){
+      if(lines[i].indexOf('約定日') >= 0){ hIdx = i; break; }
     }
-  });
+    var colIdx = detectColumns(parseCSVLine(lines[hIdx], delim));
 
-  // 新規銘柄は自動登録
-  newItems.forEach(function(item){
-    stocks.push({
-      id:uid(), name:item.name, code:item.code,
-      purchasePrice:item.price, shares:item.shares, purchaseDate:item.date,
-      yield:0, memo:'', divMonths:[], cycle:'', type:'', sector:'',
-      status:'購入済み',
-      history:[item.entry]
+    // ヘッダー行の次以降で約定日が4桁年で始まる行をデータ行として取得
+    var dataLines = lines.slice(hIdx+1).filter(function(l){
+      var c = parseCSVLine(l, delim);
+      return c.length > colIdx.date && /^\d{4}[\/\-年]/.test((c[colIdx.date]||'').trim());
     });
-    csvNewCount++;
-  });
 
-  if(csvQueue.length > 0){
-    showCSVConfirm();
-  } else {
-    save(); renderAll();
-    alert('✅ CSVインポート完了！\n新規追加: '+csvNewCount+'銘柄\n買い増し: '+csvAddCount+'件');
+    if(!dataLines.length){
+      alert('❌ 有効なデータが見つかりませんでした。\n楽天証券の取引履歴CSVをご確認ください。\n\n' +
+        '[検出] 区切:「'+(delim==='\t'?'TAB':',')+
+        '」 ヘッダ:'+(hIdx+1)+'行目 売買列:'+(colIdx.baibai+1)+
+        ' 数量列:'+(colIdx.shares+1)+' 単価列:'+(colIdx.price+1));
+      return;
+    }
+
+    csvQueue = [];
+    csvNewCount = 0; csvAddCount = 0; csvSkipCount = 0;
+    var newItems = [];
+    var sessionMap = {}; // このセッションで追加した銘柄（コード/名 → stockオブジェクト）
+
+    dataLines.forEach(function(line){
+      var c = parseCSVLine(line, delim);
+
+      // 「買」を含む行のみ（現物買・信用新規買など。売・信用返済売は除外）
+      if(!(c[colIdx.baibai]||'').trim().includes('買')) return;
+
+      var date   = toISODate((c[colIdx.date]  ||'').trim());
+      var code   = (c[colIdx.code]||'').trim().replace(/[^0-9]/g,'');
+      var name   = (c[colIdx.name]  ||'').trim();
+      var shares = parseInt(toNum(c[colIdx.shares])) || 0;
+      var price  = parseFloat(toNum(c[colIdx.price])) || 0;
+
+      if(!name || !shares || !price) return;
+
+      var entry = { id:uid(), date:date, price:price, shares:shares };
+      var key   = code || name;
+
+      // 既存銘柄検索（stocks + 今回のセッションで既に追加した銘柄）
+      var existing = stocks.find(function(s){
+        return (code && s.code===code) || s.name===name;
+      }) || sessionMap[key];
+
+      if(!existing){
+        var ns = {
+          id:uid(), name:name, code:code,
+          purchasePrice:price, shares:shares, purchaseDate:date,
+          yield:0, memo:'', divMonths:[], cycle:'', type:'', sector:'',
+          status:'購入済み', history:[entry]
+        };
+        newItems.push(ns);
+        sessionMap[key] = ns;
+        csvNewCount++;
+      } else {
+        csvQueue.push({ existing:existing, entry:entry });
+      }
+    });
+
+    // 新規銘柄をstocksに先に追加してから確認ダイアログへ
+    newItems.forEach(function(item){ stocks.push(item); });
+
+    if(csvQueue.length > 0){
+      showCSVConfirm();
+    } else {
+      save(); renderAll();
+      alert('✅ CSVインポート完了！\n新規追加: '+csvNewCount+'銘柄\n買い増し: '+csvAddCount+'件');
+    }
+  } catch(err) {
+    alert('❌ CSVの処理中にエラーが発生しました\n'+(err.message||String(err)));
   }
 }
 
