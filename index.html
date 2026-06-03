@@ -162,6 +162,11 @@ textarea.fi{resize:none;line-height:1.5}
 .settings-desc{font-size:12px;color:#6B5C3E;line-height:1.6;margin-bottom:18px}
 .btn-gold-fill{display:block;width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#8B6914,#C9A84C,#F0D080);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-appearance:none;font-family:inherit}
 .btn-gold-outline{display:block;width:100%;padding:14px;border-radius:12px;border:2px solid #C9A84C;background:#fff;color:#8B6914;font-size:14px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit}
+.csv-drop-zone{border:2px dashed #C9A84C;border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;background:#FFFAED;transition:all .2s;user-select:none}
+.csv-drop-zone:hover,.csv-drop-zone.dragover{background:#FFF3CD;border-color:#8B6914;border-style:solid}
+.csv-drop-icon{font-size:36px;margin-bottom:8px}
+.csv-drop-text{font-size:14px;font-weight:700;color:#8B6914;margin-bottom:4px}
+.csv-drop-sub{font-size:11px;color:#6B5C3E}
 </style>
 </head>
 <body>
@@ -221,8 +226,12 @@ textarea.fi{resize:none;line-height:1.5}
       </div>
       <div class="settings-card" style="margin-top:12px">
         <div class="settings-title">📊 楽天証券CSVインポート</div>
-        <div class="settings-desc">楽天証券の取引履歴CSVから購入履歴を自動インポートします。<br>対応列：約定日・銘柄コード・銘柄名・数量・単価<br>文字コード：Shift-JIS / UTF-8 自動判別</div>
-        <button class="btn-gold-outline" onclick="triggerRakutenCSV()">📂 楽天証券CSVを選択</button>
+        <div class="settings-desc">楽天証券の取引履歴CSVを読み込みます。<br>文字コード：Shift-JIS / UTF-8 自動判別</div>
+        <div class="csv-drop-zone" id="csvDropZone" onclick="triggerRakutenCSV()">
+          <div class="csv-drop-icon">📂</div>
+          <div class="csv-drop-text">CSVをここにドラッグ＆ドロップ</div>
+          <div class="csv-drop-sub">またはタップしてファイルを選択</div>
+        </div>
         <input type="file" id="rakutenFile" accept=".csv" style="display:none" onchange="onRakutenCSV(event)">
       </div>
     </div>
@@ -953,6 +962,10 @@ function triggerRakutenCSV(){ document.getElementById('rakutenFile').click(); }
 function onRakutenCSV(e){
   var file = e.target.files[0]; if(!file) return;
   e.target.value = '';
+  readCSVFile(file);
+}
+
+function readCSVFile(file){
   var reader = new FileReader();
   reader.onload = function(ev){
     var text = decodeCSVBuffer(ev.target.result);
@@ -960,6 +973,32 @@ function onRakutenCSV(e){
   };
   reader.readAsArrayBuffer(file);
 }
+
+// ── ドラッグ＆ドロップ ──
+(function(){
+  var zone = document.getElementById('csvDropZone');
+  if(!zone) return;
+  zone.addEventListener('dragover', function(e){
+    e.preventDefault(); e.stopPropagation();
+    zone.classList.add('dragover');
+  });
+  zone.addEventListener('dragleave', function(e){
+    e.preventDefault(); e.stopPropagation();
+    zone.classList.remove('dragover');
+  });
+  zone.addEventListener('drop', function(e){
+    e.preventDefault(); e.stopPropagation();
+    zone.classList.remove('dragover');
+    var files = e.dataTransfer.files;
+    if(!files || !files.length) return;
+    var file = files[0];
+    if(!file.name.match(/\.csv$/i)){
+      alert('❌ CSVファイルを選択してください');
+      return;
+    }
+    readCSVFile(file);
+  });
+})();
 
 function decodeCSVBuffer(buffer){
   // UTF-8を試し、失敗したらShift-JISにフォールバック
