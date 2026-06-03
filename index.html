@@ -1145,26 +1145,18 @@ function processRakutenCSV(text){
   // 区切り文字を自動検出
   var delim = detectDelimiter(lines.slice(0,5).join('\n'));
 
-  // ヘッダー行を探す（約定日・銘柄コード・売買 などを含む行）
-  var headerIdx = -1, colIdx = null;
-  for(var i=0; i<Math.min(lines.length,5); i++){
-    var cols = parseCSVLine(lines[i], delim);
-    var joined = cols.join('');
-    if(joined.includes('約定日') && joined.includes('銘柄') && joined.includes('単価')){
-      headerIdx = i;
-      colIdx = detectColumns(cols);
-      break;
-    }
-  }
+  // 1行目をスキップ、2行目をヘッダーとして使用
+  if(lines.length < 2){ alert('❌ データが不足しています'); return; }
+  var headerCols = parseCSVLine(lines[1], delim);
+  var colIdx = detectColumns(headerCols);
 
-  // ヘッダーが見つからない場合はデフォルト列番号（旧仕様フォールバック）
-  if(!colIdx || colIdx.date<0){
+  // ヘッダーが正しく取得できなかった場合はデフォルト列番号
+  if(colIdx.date<0){
     colIdx = { date:0, code:2, name:3, baibai:7, shares:10, price:11 };
   }
 
-  // データ行を抽出（約定日が4桁年で始まる行）
-  var dataLines = lines.filter(function(l, idx){
-    if(idx <= headerIdx) return false;
+  // 3行目以降をデータ行として取得（約定日が4桁年で始まる行のみ）
+  var dataLines = lines.slice(2).filter(function(l){
     var cols = parseCSVLine(l, delim);
     if(cols.length < 5) return false;
     var d = cols[colIdx.date].trim().replace(/^﻿/,'');
