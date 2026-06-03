@@ -1121,13 +1121,17 @@ function toISODate(s){
 function detectColumns(headerCols){
   var idx = { date:-1, code:-1, name:-1, baibai:-1, shares:-1, price:-1 };
   headerCols.forEach(function(col, i){
+    // ブラケット類を除去して正規化
     var c = col.replace(/[[\]［］（）()〔〕「」]/g,'').trim();
-    if(c==='約定日')           idx.date   = i;
-    else if(c==='銘柄コード') idx.code   = i;
-    else if(c==='銘柄名')     idx.name   = i;
-    else if(c.includes('売買'))idx.baibai = i;
-    else if(c.includes('数量'))idx.shares = i;
-    else if(c.includes('単価'))idx.price  = i;
+    if     (c==='約定日'                      ) idx.date   = i;
+    else if(c==='銘柄コード'                  ) idx.code   = i;
+    else if(c==='銘柄名'                      ) idx.name   = i;
+    // 売買：最初の一致のみ（売買区分）
+    else if(c.includes('売買') && idx.baibai<0) idx.baibai = i;
+    // 数量：startsWith で「建数量」などを除外、最初の一致のみ
+    else if(c.startsWith('数量') && idx.shares<0) idx.shares = i;
+    // 単価：startsWith で「建単価」（c='建単価円' は不一致）を除外、最初の一致のみ
+    else if(c.startsWith('単価') && idx.price<0)  idx.price  = i;
   });
   return idx;
 }
