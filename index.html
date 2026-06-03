@@ -1117,27 +1117,62 @@ function toISODate(s){
   return d.length>=8 ? d : '';
 }
 
+// ヘッダー行から各列のインデックスを自動検出
+function detectColumns(headerCols){
+  var idx = { date:-1, code:-1, name:-1, baibai:-1, shares:-1, price:-1 };
+  headerCols.forEach(function(col, i){
+    var c = col.replace(/[[\]［］（）()〔〕「」]/g,'').trim();
+    if(c==='約定日')           idx.date   = i;
+    else if(c==='銘柄コード') idx.code   = i;
+    else if(c==='銘柄名')     idx.name   = i;
+    else if(c.includes('売買'))idx.baibai = i;
+    else if(c.includes('数量'))idx.shares = i;
+    else if(c.includes('単価'))idx.price  = i;
+  });
+  return idx;
+}
+
 function processRakutenCSV(text){
-  // BOM除去
-  text = text.replace(/^﻿/,'');
+  // BOM除去（﻿）
+  text = text.replace(/^﻿/,'').replace(/^﻿/,'');
   var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
   if(!lines.length){ alert('❌ データが空です'); return; }
 
-  // 区切り文字を自動検出（最初の10行から判定）
-  var sampleLines = lines.slice(0,10).join('\n');
-  var delim = detectDelimiter(sampleLines);
+  // 区切り文字を自動検出
+  var delim = detectDelimiter(lines.slice(0,5).join('\n'));
 
-  // データ行を抽出（約定日列が4桁年で始まる行）
-  var dataLines = lines.filter(function(l){
+  // ヘッダー行を探す（約定日・銘柄コード・売買 などを含む行）
+  var headerIdx = -1, colIdx = null;
+  for(var i=0; i<Math.min(lines.length,5); i++){
+    var cols = parseCSVLine(lines[i], delim);
+    var joined = cols.join('');
+    if(joined.includes('約定日') && joined.includes('銘柄') && joined.includes('単価')){
+      headerIdx = i;
+      colIdx = detectColumns(cols);
+      break;
+    }
+  }
+
+  // ヘッダーが見つからない場合はデフォルト列番号（旧仕様フォールバック）
+  if(!colIdx || colIdx.date<0){
+    colIdx = { date:0, code:2, name:3, baibai:7, shares:10, price:11 };
+  }
+
+  // データ行を抽出（約定日が4桁年で始まる行）
+  var dataLines = lines.filter(function(l, idx){
+    if(idx <= headerIdx) return false;
     var cols = parseCSVLine(l, delim);
-    if(cols.length < 8) return false;
-    var d = cols[0].trim().replace(/^﻿/,''); // BOM除去
+    if(cols.length < 5) return false;
+    var d = cols[colIdx.date].trim().replace(/^﻿/,'');
     return /^\d{4}[\/\-年]/.test(d);
   });
 
   if(!dataLines.length){
-    var preview = lines.slice(0,3).join('\n');
-    alert('❌ 有効なデータが見つかりませんでした。\n\n先頭の内容：\n'+preview+'\n\n※楽天証券の取引履歴CSVをご確認ください');
+    alert('❌ 有効なデータが見つかりませんでした。\n\n' +
+      '検出した列構成：\n' +
+      '  約定日:' + colIdx.date + ' 銘柄コード:' + colIdx.code +
+      ' 数量:' + colIdx.shares + ' 単価:' + colIdx.price + '\n\n' +
+      '楽天証券の取引履歴CSVをご確認ください');
     return;
   }
 
@@ -1147,16 +1182,15 @@ function processRakutenCSV(text){
 
   dataLines.forEach(function(line){
     var cols = parseCSVLine(line, delim);
-    // 列: 0=約定日 1=受渡日 2=銘柄コード 3=銘柄名 4=市場 5=口座 6=取引区分 7=売買 8=数量 9=単価
-    var baibai = (cols[7]||'').trim();
-    // 「買」を含む場合のみ対象（売・信用売などを除外）
+    var baibai = (cols[colIdx.baibai]||'').trim();
+    // 「買」を含む行のみ（売・信用売などを除外）
     if(!baibai.includes('買')) return;
 
-    var date   = toISODate((cols[0]||'').replace(/^﻿/,'').trim());
-    var code   = (cols[2]||'').trim().replace(/[^0-9]/g,'');
-    var name   = (cols[3]||'').trim();
-    var shares = parseInt(toNum(cols[8]||'0')) || 0;
-    var price  = parseFloat(toNum(cols[9]||'0')) || 0;
+    var date   = toISODate((cols[colIdx.date]||'').replace(/^﻿/,'').trim());
+    var code   = (cols[colIdx.code]||'').trim().replace(/[^0-9]/g,'');
+    var name   = (cols[colIdx.name]||'').trim();
+    var shares = parseInt(toNum(cols[colIdx.shares]||'0')) || 0;
+    var price  = parseFloat(toNum(cols[colIdx.price]||'0')) || 0;
 
     if(!name || !shares || !price) return;
 
