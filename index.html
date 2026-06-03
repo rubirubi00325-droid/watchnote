@@ -162,6 +162,9 @@ textarea.fi{resize:none;line-height:1.5}
 .settings-desc{font-size:12px;color:#6B5C3E;line-height:1.6;margin-bottom:18px}
 .btn-gold-fill{display:block;width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#8B6914,#C9A84C,#F0D080);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;-webkit-appearance:none;font-family:inherit}
 .btn-gold-outline{display:block;width:100%;padding:14px;border-radius:12px;border:2px solid #C9A84C;background:#fff;color:#8B6914;font-size:14px;font-weight:700;cursor:pointer;-webkit-appearance:none;font-family:inherit}
+.csv-method-tabs{display:flex;gap:6px;margin-bottom:12px}
+.csv-mtab{flex:1;padding:8px 4px;border-radius:10px;border:1.5px solid #E8DFC8;background:#FAF8F2;color:#6B5C3E;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;transition:all .15s}
+.csv-mtab.active{background:linear-gradient(135deg,#7A5C10,#C9A84C);border-color:#C9A84C;color:#fff}
 .csv-drop-zone{border:2px dashed #C9A84C;border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;background:#FFFAED;transition:all .2s;user-select:none}
 .csv-drop-zone:hover,.csv-drop-zone.dragover{background:#FFF3CD;border-color:#8B6914;border-style:solid}
 .csv-drop-icon{font-size:36px;margin-bottom:8px}
@@ -226,13 +229,31 @@ textarea.fi{resize:none;line-height:1.5}
       </div>
       <div class="settings-card" style="margin-top:12px">
         <div class="settings-title">📊 楽天証券CSVインポート</div>
-        <div class="settings-desc">楽天証券の取引履歴CSVを読み込みます。<br>文字コード：Shift-JIS / UTF-8 自動判別</div>
-        <div class="csv-drop-zone" id="csvDropZone" onclick="triggerRakutenCSV()">
-          <div class="csv-drop-icon">📂</div>
-          <div class="csv-drop-text">CSVをここにドラッグ＆ドロップ</div>
-          <div class="csv-drop-sub">またはタップしてファイルを選択</div>
+        <div class="settings-desc">楽天証券の取引履歴CSVを読み込みます。</div>
+
+        <!-- タブ切り替え -->
+        <div class="csv-method-tabs">
+          <button class="csv-mtab active" id="csvMTab0" onclick="switchCSVMethod(0)">📋 テキスト貼り付け</button>
+          <button class="csv-mtab" id="csvMTab1" onclick="switchCSVMethod(1)">📂 ファイル選択</button>
         </div>
-        <input type="file" id="rakutenFile" accept=".csv" style="display:none" onchange="onRakutenCSV(event)">
+
+        <!-- テキスト貼り付けパネル -->
+        <div id="csvPastePanel">
+          <textarea id="csvPasteArea" class="fi" rows="6"
+            placeholder="楽天証券の取引履歴CSVの内容をここに貼り付けてください…"
+            style="font-size:11px;font-family:monospace;line-height:1.5;resize:vertical"></textarea>
+          <button class="btn-gold-fill" style="margin-top:8px" onclick="onCSVPaste()">▶ 読み込む</button>
+        </div>
+
+        <!-- ファイル選択パネル -->
+        <div id="csvFilePanel" style="display:none">
+          <div class="csv-drop-zone" id="csvDropZone" onclick="triggerRakutenCSV()">
+            <div class="csv-drop-icon">📂</div>
+            <div class="csv-drop-text">CSVをここにドラッグ＆ドロップ</div>
+            <div class="csv-drop-sub">またはタップしてファイルを選択</div>
+          </div>
+          <input type="file" id="rakutenFile" accept=".csv" style="display:none" onchange="onRakutenCSV(event)">
+        </div>
       </div>
     </div>
   </div>
@@ -956,6 +977,22 @@ function onImport(e){
 // ══════════════════════════════════════════
 var csvQueue = [];  // [{row, stock(existing or null)}]
 var csvNewCount = 0, csvAddCount = 0, csvSkipCount = 0;
+
+// ── CSV メソッド切り替え ──
+function switchCSVMethod(n){
+  document.getElementById('csvMTab0').classList.toggle('active', n===0);
+  document.getElementById('csvMTab1').classList.toggle('active', n===1);
+  document.getElementById('csvPastePanel').style.display = n===0 ? 'block' : 'none';
+  document.getElementById('csvFilePanel').style.display  = n===1 ? 'block' : 'none';
+}
+
+// ── テキスト貼り付け読み込み ──
+function onCSVPaste(){
+  var text = document.getElementById('csvPasteArea').value.trim();
+  if(!text){ alert('CSVの内容を貼り付けてください'); return; }
+  processRakutenCSV(text);
+  document.getElementById('csvPasteArea').value = '';
+}
 
 function triggerRakutenCSV(){ document.getElementById('rakutenFile').click(); }
 
