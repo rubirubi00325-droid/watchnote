@@ -1005,7 +1005,16 @@ function onRakutenCSV(e){
 function readCSVFile(file){
   var reader = new FileReader();
   reader.onload = function(ev){
-    processRakutenCSV(decodeCSVBuffer(ev.target.result));
+    var text = decodeCSVBuffer(ev.target.result);
+    // 日本語が含まれていない場合はTextDecoderのShift-JIS対応が不十分 → FileReader経由で再読み込み
+    if(!/[぀-ヿ一-龯｡-ﾟ]/.test(text)){
+      var r2 = new FileReader();
+      r2.onload = function(ev2){ processRakutenCSV(ev2.target.result); };
+      r2.onerror = function(){ processRakutenCSV(text); };
+      r2.readAsText(file, 'Shift_JIS');
+    } else {
+      processRakutenCSV(text);
+    }
   };
   reader.onerror = function(){ alert('❌ ファイルの読み込みに失敗しました'); };
   reader.readAsArrayBuffer(file);
@@ -1054,10 +1063,9 @@ function decodeCSVBuffer(buffer){
 }
 
 function detectDelimiter(line){
-  // タブとカンマの数を比較して多い方を採用
   var tabs   = (line.match(/\t/g)||[]).length;
   var commas = (line.match(/,/g)||[]).length;
-  return tabs >= commas ? '\t' : ',';
+  return tabs > commas ? '\t' : ',';
 }
 
 function parseCSVLine(line, delim){
@@ -1114,17 +1122,19 @@ function detectColumns(headerCols){
 }
 
 function processRakutenCSV(text){
-  // BOM除去（﻿）
   text = text.replace(/^﻿/,'').replace(/^﻿/,'');
   var lines = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
   if(!lines.length){ alert('❌ データが空です'); return; }
 
-  // 区切り文字を自動検出
-  var delim = detectDelimiter(lines.slice(0,5).join('\n'));
+  // 区切り文字を自動検出（データ行が多い後半も含めて判定）
+  var delim = detectDelimiter(lines.join('\n'));
 
-  // 1行目をスキップ、2行目をヘッダーとして使用
-  if(lines.length < 2){ alert('❌ データが不足しています'); return; }
-  var headerCols = parseCSVLine(lines[1], delim);
+  // ヘッダー行を自動検出（'約定日'が含まれる最初の行）
+  var headerLineIdx = 0;
+  for(var i=0; i<Math.min(lines.length,5); i++){
+    if(lines[i].indexOf('約定日') >= 0){ headerLineIdx = i; break; }
+  }
+  var headerCols = parseCSVLine(lines[headerLineIdx], delim);
   var colIdx = detectColumns(headerCols);
 
   // ヘッダーが正しく取得できなかった場合はデフォルト列番号
@@ -1132,8 +1142,8 @@ function processRakutenCSV(text){
     colIdx = { date:0, code:2, name:3, baibai:7, shares:10, price:11 };
   }
 
-  // 3行目以降をデータ行として取得（約定日が4桁年で始まる行のみ）
-  var dataLines = lines.slice(2).filter(function(l){
+  // ヘッダー行の次からをデータ行として取得（約定日が4桁年で始まる行のみ）
+  var dataLines = lines.slice(headerLineIdx + 1).filter(function(l){
     var cols = parseCSVLine(l, delim);
     if(cols.length < 5) return false;
     var d = cols[colIdx.date].trim().replace(/^﻿/,'');
