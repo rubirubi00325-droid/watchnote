@@ -118,7 +118,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP'
 /* ── BOTTOM SHEET ── */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;max-width:480px;margin:0 auto}
 .overlay.show{display:block}
-.sheet{display:none;position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#fff;border-radius:24px 24px 0 0;padding:24px 16px;padding-bottom:max(24px,env(safe-area-inset-bottom));z-index:201;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sheet{display:none;position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#fff;border-radius:24px 24px 0 0;padding:24px 16px;padding-bottom:max(24px,env(safe-area-inset-bottom));z-index:201;max-height:92vh;overflow-y:scroll;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .sheet.show{display:block}
 .sheet-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .sheet-ttl{font-size:17px;font-weight:900;color:#1A1208}
