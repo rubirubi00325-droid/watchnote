@@ -285,17 +285,17 @@ textarea.fi{resize:none;line-height:1.5}
   <div class="fg">
     <label class="fl">🥮 景気サイクル</label>
     <div class="cycle-grid">
-      <div class="cy" data-cycle="金融相場"><div class="cy-name">💹 金融相場</div><div class="cy-desc">情報・通信・不動産など</div></div>
-      <div class="cy" data-cycle="業績相場"><div class="cy-name">🏭 業績相場</div><div class="cy-desc">機械・化学・電気機器など</div></div>
-      <div class="cy" data-cycle="逆金融相場"><div class="cy-name">🛡 逆金融相場</div><div class="cy-desc">公益・食品・医薬品など</div></div>
-      <div class="cy" data-cycle="逆業績相場"><div class="cy-name">⚓ 逆業績相場</div><div class="cy-desc">エネルギー・素材など</div></div>
+      <div class="cy" data-cycle="金融相場"><div class="cy-name">🌅 金融相場</div><div class="cy-desc">情報・通信・不動産など</div></div>
+      <div class="cy" data-cycle="業績相場"><div class="cy-name">☀️ 業績相場</div><div class="cy-desc">機械・化学・電気機器など</div></div>
+      <div class="cy" data-cycle="逆金融相場"><div class="cy-name">🌆 逆金融相場</div><div class="cy-desc">公益・食品・医薬品など</div></div>
+      <div class="cy" data-cycle="逆業績相場"><div class="cy-name">🌙 逆業績相場</div><div class="cy-desc">エネルギー・素材など</div></div>
     </div>
   </div>
   <div class="fg">
     <label class="fl">📈 銘柄タイプ</label>
     <div class="st-row" id="typeRow">
-      <div class="st" data-type="ディフェンシブ">🛡 ディフェンシブ</div>
-      <div class="st" data-type="景気敏感">📊 景気敏感</div>
+      <div class="st" data-type="ディフェンシブ">🏰 ディフェンシブ</div>
+      <div class="st" data-type="景気敏感">🚀 景気敏感</div>
     </div>
   </div>
   <div class="fg">
@@ -353,6 +353,9 @@ var curId = null, isEdit = false, editHistIdx = -1, chartIdx = 0;
 var CYCLE_COLS = {'金融相場':'#4A90D9','業績相場':'#C9A84C','逆金融相場':'#5CB85C','逆業績相場':'#E8564A'};
 var TYPE_COLS  = {'ディフェンシブ':'#AD1457','景気敏感':'#2E7D32','未分類':'#9B9B9B','未設定':'#BDBDBD'};
 var EXTRA_COLS = ['#9B59B6','#E67E22','#1ABC9C','#3498DB','#E74C3C','#F39C12','#27AE60','#8E44AD'];
+var CYCLE_LABEL = {'金融相場':'🌅 金融相場','業績相場':'☀️ 業績相場','逆金融相場':'🌆 逆金融相場','逆業績相場':'🌙 逆業績相場'};
+var TYPE_LABEL  = {'ディフェンシブ':'🏰 ディフェンシブ','景気敏感':'🚀 景気敏感'};
+var CHART_LABELS = [CYCLE_LABEL, TYPE_LABEL, null];
 
 var STOCK_DB = {
   '1332':['逆業績相場','ディフェンシブ'],'1605':['逆業績相場','景気敏感'],
@@ -539,7 +542,7 @@ function arcPath(cx,cy,R,r,s,e){
   return['M',p1.x,p1.y,'A',R,R,0,lg,1,p2.x,p2.y,'L',p3.x,p3.y,'A',r,r,0,lg,0,p4.x,p4.y,'Z'].join(' ');
 }
 
-function drawSVGDonut(cm, tv){
+function drawSVGDonut(cm, tv, labelMap){
   var svg=document.getElementById('chartSvg');
   var leg=document.getElementById('chartLegend');
   svg.innerHTML=''; leg.innerHTML='';
@@ -571,7 +574,7 @@ function drawSVGDonut(cm, tv){
     }
     cur=end;
     // Legend row
-    leg.innerHTML+='<div class="cli"><div class="cli-l"><div class="cli-dot" style="background:'+col+'"></div><span class="cli-name">'+e[0]+'</span></div><div class="cli-r"><span class="cli-pct">'+Math.round(pct)+'%</span><span class="cli-amt">'+fmt(e[1])+'</span></div></div>';
+    leg.innerHTML+='<div class="cli"><div class="cli-l"><div class="cli-dot" style="background:'+col+'"></div><span class="cli-name">'+(labelMap&&labelMap[e[0]]||e[0])+'</span></div><div class="cli-r"><span class="cli-pct">'+Math.round(pct)+'%</span><span class="cli-amt">'+fmt(e[1])+'</span></div></div>';
   });
 
 }
@@ -581,7 +584,7 @@ function switchChart(n){
   [0,1,2].forEach(function(i){
     document.getElementById('cbtn'+i).classList.toggle('active',i===n);
   });
-  if(chartCache[n]) drawSVGDonut(chartCache[n].cm, chartCache[n].tv);
+  if(chartCache[n]) drawSVGDonut(chartCache[n].cm, chartCache[n].tv, CHART_LABELS[n]);
 }
 
 function renderChart(){
@@ -597,7 +600,7 @@ function renderChart(){
   if(!tv[0]&&!tv[1]&&!tv[2]){ card.style.display='none'; return; }
   card.style.display='block';
   chartCache=[{cm:cm[0],tv:tv[0]},{cm:cm[1],tv:tv[1]},{cm:cm[2],tv:tv[2]}];
-  drawSVGDonut(chartCache[chartIdx].cm, chartCache[chartIdx].tv);
+  drawSVGDonut(chartCache[chartIdx].cm, chartCache[chartIdx].tv, CHART_LABELS[chartIdx]);
 }
 
 // ══════════════════════════════════════════
@@ -626,8 +629,8 @@ function renderList(){
     var sc=s.status==='購入済み'?'purchased':'watching';
     var avg=avgPrice(s), ts=totalShares(s);
     var tags='<span class="tag '+(s.status==='購入済み'?'tag-bought':'tag-watching')+'">'+s.status+'</span>';
-    if(s.cycle) tags+='<span class="tag tag-cycle">'+s.cycle+'</span>';
-    if(s.type)  tags+='<span class="tag '+(s.type==='ディフェンシブ'?'tag-type-d':'tag-type-s')+'">'+s.type+'</span>';
+    if(s.cycle) tags+='<span class="tag tag-cycle">'+(CYCLE_LABEL[s.cycle]||s.cycle)+'</span>';
+    if(s.type)  tags+='<span class="tag '+(s.type==='ディフェンシブ'?'tag-type-d':'tag-type-s')+'">'+(TYPE_LABEL[s.type]||s.type)+'</span>';
     if(s.sector) tags+='<span class="tag tag-sector">'+s.sector+'</span>';
     var info='';
     if(avg) info+='<span>平均取得 <span class="val">'+fmt(avg)+'</span></span>';
@@ -662,8 +665,8 @@ function renderDetail(s){
 
   // Tags
   var tags='<span class="tag '+(s.status==='購入済み'?'tag-bought':'tag-watching')+'">'+s.status+'</span>';
-  if(s.cycle) tags+='<span class="tag tag-cycle">'+s.cycle+'</span>';
-  if(s.type)  tags+='<span class="tag '+(s.type==='ディフェンシブ'?'tag-type-d':'tag-type-s')+'">'+s.type+'</span>';
+  if(s.cycle) tags+='<span class="tag tag-cycle">'+(CYCLE_LABEL[s.cycle]||s.cycle)+'</span>';
+  if(s.type)  tags+='<span class="tag '+(s.type==='ディフェンシブ'?'tag-type-d':'tag-type-s')+'">'+(TYPE_LABEL[s.type]||s.type)+'</span>';
   if(s.sector) tags+='<span class="tag tag-sector">'+s.sector+'</span>';
   document.getElementById('detTags').innerHTML=tags;
 
